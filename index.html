@@ -1,0 +1,2214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CCPD Internship Evaluation Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+:root{--bg:#F7F8FA;--surface:#FFFFFF;--surface-2:#F0F2F5;--border:#E2E6EA;--border-strong:#C9CDD4;--text-primary:#1A1D23;--text-secondary:#5A6072;--text-tertiary:#9199A8;--accent:#3B5BDB;--accent-light:#EDF2FF;--accent-mid:#748FFC;--green:#2F9E44;--green-light:#EBFBEE;--amber:#E67700;--amber-light:#FFF9DB;--red:#C92A2A;--red-light:#FFF5F5;--shadow-sm:0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);--shadow-md:0 4px 12px rgba(0,0,0,0.08),0 2px 4px rgba(0,0,0,0.04);--radius:10px;--radius-sm:6px;--font:'Inter',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;--umw-blue:#4C9AFF;--umw-blue-light:#E3F2FD}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text-primary);font-size:14px;line-height:1.5;min-height:100vh}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100;box-shadow:var(--shadow-sm)}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-logo{font-size:13px;font-weight:600;letter-spacing:0.04em;color:var(--accent);text-transform:uppercase}
+.topbar-divider{width:1px;height:20px;background:var(--border)}
+.topbar-title{font-size:14px;color:var(--text-secondary);font-weight:400}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.record-count{font-family:var(--mono);font-size:12px;color:var(--text-tertiary);background:var(--surface-2);padding:4px 10px;border-radius:var(--radius-sm)}
+.export-btn-header{padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text-secondary);font-family:var(--font);font-size:12px;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+.export-btn-header:hover{background:var(--accent);color:white;border-color:var(--accent)}
+.layout{display:grid;grid-template-columns:260px 1fr;min-height:calc(100vh - 56px)}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:1.5rem 1rem;overflow-y:auto}
+.sidebar-section{margin-bottom:1.75rem}
+.sidebar-heading{font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:10px;padding-left:4px}
+.upload-zone{border:1.5px dashed var(--border-strong);border-radius:var(--radius);padding:1.25rem 1rem;text-align:center;cursor:pointer;transition:all 0.15s;background:var(--bg)}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--accent);background:var(--accent-light)}
+.upload-icon{font-size:22px;margin-bottom:8px;opacity:0.5}
+.upload-text{font-size:12px;color:var(--text-secondary);line-height:1.5}
+.upload-text strong{color:var(--accent)}
+#fileInput{display:none}
+.file-list{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.file-pill{display:flex;align-items:center;gap:8px;background:var(--green-light);border:1px solid #A9E6B8;border-radius:var(--radius-sm);padding:5px 8px;font-size:11px;color:var(--green)}
+.file-pill-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-pill-remove{cursor:pointer;opacity:0.6;font-size:14px;flex-shrink:0;line-height:1}
+.file-pill-remove:hover{opacity:1}
+.filter-group{margin-bottom:10px}
+.filter-label{font-size:12px;color:var(--text-secondary);margin-bottom:4px;display:block}
+select{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text-primary);font-family:var(--font);font-size:13px;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%239199A8' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
+select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,91,219,0.1)}
+.clear-btn{width:100%;padding:7px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text-secondary);font-family:var(--font);font-size:12px;cursor:pointer;margin-top:4px;transition:all 0.15s}
+.clear-btn:hover{background:var(--surface-2);color:var(--text-primary)}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-sm);font-size:13px;color:var(--text-secondary);cursor:pointer;transition:all 0.12s;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:var(--surface-2);color:var(--text-primary)}
+.nav-item.active{background:var(--accent-light);color:var(--accent);font-weight:500}
+.nav-icon{font-size:15px;width:18px;text-align:center}
+.main{padding:1.75rem 2rem;overflow-y:auto}
+.page{display:none}
+.page.active{display:block}
+.page-heading{font-size:18px;font-weight:600;color:var(--text-primary);margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--text-secondary);margin-bottom:1.5rem}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4rem 2rem;text-align:center;color:var(--text-tertiary)}
+.empty-icon{font-size:40px;margin-bottom:1rem;opacity:0.4}
+.empty-title{font-size:16px;font-weight:500;color:var(--text-secondary);margin-bottom:6px}
+.empty-sub{font-size:13px;max-width:320px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:1.5rem}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;box-shadow:var(--shadow-sm)}
+.stat-card.highlight{background:linear-gradient(135deg,#2F9E44,#51cf66);border:none;color:white}
+.stat-card.highlight .stat-label{color:rgba(255,255,255,0.9)}
+.stat-card.highlight .stat-num{color:white}
+.stat-card.highlight .stat-context{color:rgba(255,255,255,0.85)}
+.stat-label{font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px}
+.stat-num{font-size:30px;font-weight:600;color:var(--text-primary);line-height:1;font-family:var(--mono)}
+.stat-context{font-size:11px;color:var(--text-secondary);margin-top:5px}
+.table-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px;flex-wrap:wrap}
+.search-box{flex:1;min-width:200px;padding:7px 12px 7px 34px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-family:var(--font);font-size:13px;color:var(--text-primary);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239199A8' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:10px center}
+.search-box:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,91,219,0.1)}
+.export-btn{padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text-secondary);font-family:var(--font);font-size:12px;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+.export-btn:hover{background:var(--surface-2);color:var(--text-primary)}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead tr{border-bottom:1px solid var(--border)}
+th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-tertiary);background:var(--surface-2);cursor:pointer;user-select:none;white-space:nowrap}
+th:hover{color:var(--text-primary)}
+th.sort-asc::after{content:' ↑'}
+th.sort-desc::after{content:' ↓'}
+td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:13px}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover>td{background:#FAFBFD}
+tbody tr.expanded>td{background:var(--accent-light)}
+.expand-btn{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);width:22px;height:22px;cursor:pointer;font-size:11px;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;transition:all 0.12s}
+.expand-btn:hover{border-color:var(--accent);color:var(--accent)}
+.expanded .expand-btn{background:var(--accent);border-color:var(--accent);color:white}
+.detail-row td{background:var(--accent-light)!important;padding:0;border-bottom:2px solid var(--accent)}
+.detail-inner{padding:1rem 1.25rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.detail-field-label{font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);margin-bottom:5px}
+.detail-field-text{font-size:13px;color:var(--text-primary);line-height:1.65}
+.detail-field.full{grid-column:1/-1}
+.detail-field-empty{color:var(--text-tertiary);font-style:italic}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500}
+.badge-final{background:var(--accent-light);color:var(--accent)}
+.badge-midterm{background:var(--amber-light);color:var(--amber)}
+.badge-green{background:var(--green-light);color:var(--green)}
+.badge-gray{background:var(--surface-2);color:var(--text-secondary)}
+.badge-umw{background:var(--umw-blue-light);color:var(--umw-blue);font-weight:600;margin-left:6px}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.chart-grid-3{grid-column:1/-1}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;box-shadow:var(--shadow-sm)}
+.chart-card-clickable{cursor:pointer;transition:all 0.15s}
+.chart-card-clickable:hover{border-color:var(--accent);box-shadow:var(--shadow-md)}
+.chart-title{font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:3px}
+.chart-sub{font-size:12px;color:var(--text-tertiary);margin-bottom:1rem}
+.chart-canvas-wrap{position:relative}
+.phrase-cloud-inner{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;padding:1rem 0;min-height:140px}
+.phrase-tag{display:inline-block;padding:5px 14px;border-radius:999px;cursor:pointer;transition:transform 0.12s;font-weight:500;line-height:1.3;text-align:center}
+.phrase-tag:hover{transform:scale(1.04)}
+.takeaways-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;box-shadow:var(--shadow-sm);margin-bottom:16px}
+.takeaways-list{display:flex;flex-direction:column;gap:14px;margin-top:1rem}
+.takeaway-item{display:flex;align-items:flex-start;gap:14px;cursor:pointer;padding:10px;border-radius:var(--radius-sm);transition:background 0.15s}
+.takeaway-item:hover{background:var(--surface-2)}
+.takeaway-rank{width:28px;height:28px;border-radius:50%;background:var(--accent);color:white;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.takeaway-body{flex:1}
+.takeaway-theme{font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:3px}
+.takeaway-advice{font-size:13px;color:var(--text-secondary);line-height:1.6}
+.takeaway-count{font-size:11px;font-family:var(--mono);color:var(--accent);background:var(--accent-light);padding:2px 8px;border-radius:999px;white-space:nowrap;flex-shrink:0;margin-top:3px}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;align-items:center;justify-content:center;padding:1.5rem}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius);box-shadow:0 20px 60px rgba(0,0,0,0.2);width:100%;max-width:700px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-header{padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-shrink:0}
+.modal-title{font-size:15px;font-weight:600;color:var(--text-primary);line-height:1.4}
+.modal-sub{font-size:12px;color:var(--text-tertiary);margin-top:3px}
+.modal-close{background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-tertiary);line-height:1;flex-shrink:0;padding:2px 4px;transition:color 0.12s}
+.modal-close:hover{color:var(--text-primary)}
+.modal-body{padding:1.25rem 1.5rem;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.modal-excerpt{background:var(--surface-2);border-radius:var(--radius-sm);padding:1rem 1.25rem;border-left:3px solid var(--accent)}
+.modal-excerpt-text{font-size:13px;color:var(--text-primary);line-height:1.7;margin-bottom:8px}
+.modal-excerpt-highlight{background:#FFF9C4;border-radius:2px;padding:0 2px}
+.modal-excerpt-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.modal-excerpt-field{font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--accent);background:var(--accent-light);padding:2px 8px;border-radius:999px}
+.modal-excerpt-source{font-size:11px;color:var(--text-tertiary)}
+.modal-empty{font-size:13px;color:var(--text-tertiary);text-align:center;padding:1rem 0}
+.modal-back-btn{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 12px;font-size:12px;color:var(--text-secondary);cursor:pointer;margin-bottom:10px;display:inline-flex;align-items:center;gap:6px}
+.modal-back-btn:hover{background:var(--surface-2);color:var(--text-primary)}
+.nace-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden;margin-top:16px}
+.nace-bar-row{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border)}
+.nace-bar-row:last-child{border-bottom:none}
+.nace-bar-label{font-size:12px;color:var(--text-secondary);width:260px;flex-shrink:0}
+.nace-track{flex:1;background:var(--surface-2);border-radius:4px;height:16px;overflow:hidden}
+.nace-fill{height:100%;background:var(--accent);border-radius:4px;transition:width 0.4s;display:flex;align-items:center;justify-content:flex-end;padding-right:6px}
+.nace-pct{font-size:10px;color:white;font-weight:600}
+.qual-grid{display:flex;flex-direction:column;gap:12px}
+.qual-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;box-shadow:var(--shadow-sm)}
+.qual-card-meta{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.qual-card-name{font-size:13px;font-weight:600;color:var(--text-primary)}
+.qual-card-employer{font-size:12px;color:var(--text-secondary)}
+.qual-section{margin-bottom:12px}
+.qual-section:last-child{margin-bottom:0}
+.qual-section-label{font-size:10px;font-weight:600;letter-spacing:0.09em;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:5px}
+.qual-section-text{font-size:13px;color:var(--text-primary);line-height:1.7;border-left:3px solid var(--border);padding-left:12px}
+.qual-section-text.strengths{border-color:var(--green)}
+.qual-section-text.improvement{border-color:var(--amber)}
+.qual-section-text.impact{border-color:var(--accent)}
+.qual-section-text.feedback{border-color:#845EF7}
+.qual-empty{color:var(--text-tertiary);font-style:italic;font-size:13px}
+.quote-filter-row{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
+.qb-filter{padding:5px 14px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12px;color:var(--text-secondary);cursor:pointer;transition:all 0.12s}
+.qb-filter:hover{background:var(--surface-2)}
+.qb-filter.active{background:var(--accent);border-color:var(--accent);color:white;font-weight:500}
+.quote-list{display:flex;flex-direction:column;gap:10px}
+.quote-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;box-shadow:var(--shadow-sm);display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start}
+.quote-text{font-size:14px;color:var(--text-primary);line-height:1.7;font-style:italic;border-left:3px solid var(--accent-mid);padding-left:14px;margin-bottom:8px}
+.quote-attribution{font-size:11px;color:var(--text-tertiary)}
+.copy-btn{padding:5px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-size:11px;color:var(--text-secondary);cursor:pointer;white-space:nowrap;transition:all 0.12s;flex-shrink:0}
+.copy-btn:hover{background:var(--surface-2);color:var(--text-primary)}
+.copy-btn.copied{background:var(--green-light);color:var(--green);border-color:#A9E6B8}
+.pagination{display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px}
+.pagination-info{font-size:12px;color:var(--text-tertiary)}
+.pagination-btns{display:flex;gap:4px}
+.page-btn{padding:5px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-size:12px;color:var(--text-secondary);cursor:pointer}
+.page-btn:hover{background:var(--surface-2)}
+.page-btn.active{background:var(--accent);border-color:var(--accent);color:white}
+.page-btn:disabled{opacity:0.4;cursor:not-allowed}
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--text-primary);color:white;padding:10px 16px;border-radius:var(--radius-sm);font-size:13px;z-index:999;opacity:0;transform:translateY(8px);transition:all 0.2s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.employer-modal{max-width:900px;max-height:90vh}
+.employer-table{width:100%;border-collapse:collapse;margin-top:1rem}
+.employer-table th,.employer-table td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)}
+.employer-table th{background:var(--surface-2);font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-tertiary)}
+.employer-table tr{cursor:pointer;transition:background 0.12s}
+.employer-table tr:hover{background:var(--accent-light)}
+.employer-detail-section{margin-bottom:1.5rem}
+.employer-detail-title{font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.employer-detail-title span{font-size:11px;font-weight:400;color:var(--text-tertiary)}
+.employer-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem}
+.employer-stat{background:var(--surface-2);border-radius:var(--radius-sm);padding:12px;text-align:center}
+.employer-stat-num{font-size:24px;font-weight:600;color:var(--accent);font-family:var(--mono)}
+.employer-stat-label{font-size:11px;color:var(--text-tertiary);margin-top:2px}
+.theme-bar{display:flex;align-items:center;gap:10px;margin-bottom:8px;cursor:pointer;padding:6px 8px;border-radius:var(--radius-sm);transition:background 0.12s}
+.theme-bar:hover{background:var(--surface-2)}
+.theme-bar-label{width:180px;font-size:12px;color:var(--text-secondary);flex-shrink:0}
+.theme-bar-track{flex:1;background:var(--surface-2);border-radius:4px;height:20px;overflow:hidden}
+.theme-bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px}
+.theme-bar-fill span{font-size:11px;color:white;font-weight:500}
+.theme-bar-count{width:50px;text-align:right;font-size:12px;color:var(--text-tertiary);font-family:var(--mono)}
+.nace-bar-clickable{cursor:pointer;transition:background 0.12s;border-radius:var(--radius-sm);margin:-4px;padding:4px}
+.nace-bar-clickable:hover{background:var(--surface-2)}
+.view-all-btn{background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);padding:8px 16px;font-size:12px;font-weight:500;cursor:pointer;margin-top:10px}
+.view-all-btn:hover{background:#2f4bc7}
+.umw-category-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin:1rem 0}
+.umw-category-card{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:1.25rem;cursor:pointer;transition:all 0.15s;text-align:center}
+.umw-category-card:hover{border-color:var(--accent);box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.umw-category-icon{font-size:28px;margin-bottom:8px}
+.umw-category-name{font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:4px}
+.umw-category-count{font-size:12px;color:var(--text-secondary)}
+.umw-dept-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin:1rem 0}
+.umw-dept-tile{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;cursor:pointer;transition:all 0.12s;display:flex;justify-content:space-between;align-items:center}
+.umw-dept-tile:hover{background:var(--accent-light);border-color:var(--accent)}
+.umw-dept-name{font-size:12px;color:var(--text-primary);font-weight:500}
+.umw-dept-count{font-size:11px;color:var(--accent);font-family:var(--mono);background:var(--accent-light);padding:2px 8px;border-radius:999px}
+.umw-intern-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:10px}
+.umw-intern-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px}
+.umw-intern-id{font-weight:600;color:var(--text-primary)}
+.umw-intern-badges{display:flex;gap:6px;flex-wrap:wrap}
+.umw-intern-dept{display:inline-block;background:var(--accent-light);color:var(--accent);font-size:11px;font-weight:500;padding:3px 10px;border-radius:999px;margin-bottom:8px}
+.umw-intern-meta{font-size:12px;color:var(--text-secondary);margin-bottom:8px}
+.umw-intern-resp{font-size:13px;color:var(--text-primary);line-height:1.6;border-left:3px solid var(--border);padding-left:12px}
+.tag-warning{background:#FFF4E6;border:1px solid #FFD8A8;border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px;font-size:12px;color:#E67700;display:flex;align-items:flex-start;gap:8px}
+.tag-warning-icon{font-size:16px;flex-shrink:0}
+.tag-input-row{display:flex;gap:6px;margin-bottom:10px}
+.tag-input{flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px}
+.tag-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,91,219,0.1)}
+.tag-add-btn{padding:7px 14px;border:1px solid var(--accent);border-radius:var(--radius-sm);background:var(--accent);color:white;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap}
+.tag-add-btn:hover{background:#2f4bc7}
+.tag-list{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;margin-bottom:10px}
+.tag-item{display:flex;align-items:center;gap:8px;background:var(--umw-blue-light);border:1px solid var(--umw-blue);border-radius:var(--radius-sm);padding:6px 10px;font-size:12px}
+.tag-item.zero-matches{background:var(--surface-2);border-color:var(--border);opacity:0.6}
+.tag-item-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-primary);font-weight:500}
+.tag-item-count{font-family:var(--mono);font-size:11px;color:var(--umw-blue);background:white;padding:2px 6px;border-radius:999px;flex-shrink:0}
+.tag-item.zero-matches .tag-item-count{color:var(--text-tertiary)}
+.tag-item-remove{cursor:pointer;opacity:0.6;font-size:14px;flex-shrink:0;line-height:1;color:var(--text-secondary)}
+.tag-item-remove:hover{opacity:1;color:var(--red)}
+.tag-import-export{display:flex;gap:6px;padding-top:6px;border-top:1px solid var(--border)}
+.tag-ie-btn{flex:1;padding:6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-size:11px;color:var(--text-secondary);cursor:pointer;transition:all 0.15s}
+.tag-ie-btn:hover{background:var(--surface-2);color:var(--text-primary)}
+.tag-note{font-size:11px;color:var(--text-tertiary);line-height:1.5;margin-top:6px;font-style:italic}
+.employer-search{width:100%;padding:8px 12px 8px 34px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-family:var(--font);font-size:13px;color:var(--text-primary);margin-bottom:1rem;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239199A8' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:10px center}
+.employer-search:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,91,219,0.1)}
+.employer-section-title{font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-tertiary);margin:1rem 0 0.5rem;padding-bottom:0.5rem;border-bottom:1px solid var(--border)}
+.employer-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:var(--radius-sm);transition:background 0.12s;cursor:pointer}
+.employer-row:hover{background:var(--surface-2)}
+.employer-row-name{flex:1;font-size:13px;color:var(--text-primary)}
+.employer-row-count{font-family:var(--mono);font-size:12px;color:var(--text-tertiary);margin-right:10px}
+.employer-row-badge{background:var(--umw-blue-light);color:var(--umw-blue);font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;display:flex;align-items:center;gap:4px}
+.employer-row-tag-btn{background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);font-size:11px;font-weight:500;padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:all 0.12s;white-space:nowrap}
+.employer-row-tag-btn:hover{background:var(--accent);color:white}
+.debug-panel{position:fixed;bottom:0;left:0;width:100%;max-width:600px;background:#1a1d23;color:#00ff00;font-family:var(--mono);font-size:11px;border-top:2px solid #00ff00;z-index:9999;max-height:300px;overflow-y:auto;display:none}
+.debug-panel.open{display:block}
+.debug-header{padding:8px 12px;background:#000;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #00ff00}
+.debug-close{background:#ff0000;color:white;border:none;padding:4px 12px;cursor:pointer;font-size:10px;border-radius:3px}
+.debug-content{padding:10px 12px;line-height:1.6}
+.debug-toggle{position:fixed;bottom:10px;left:10px;background:#1a1d23;color:#00ff00;border:2px solid #00ff00;padding:8px 16px;cursor:pointer;font-family:var(--mono);font-size:11px;border-radius:5px;z-index:9998;box-shadow:0 4px 12px rgba(0,0,0,0.3)}
+.debug-toggle:hover{background:#00ff00;color:#1a1d23}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.sidebar{border-right:none;border-bottom:1px solid var(--border)}.chart-grid{grid-template-columns:1fr}.detail-inner{grid-template-columns:1fr}.employer-stat-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.main{padding:1rem}.topbar{padding:0 1rem}}
+</style>
+</head>
+<body>
+<header class="topbar">
+<div class="topbar-left">
+<div class="topbar-logo">CCPD</div>
+<div class="topbar-divider"></div>
+<div class="topbar-title">Internship Evaluation Dashboard</div>
+</div>
+<div class="topbar-right">
+<div class="record-count" id="recordCount">0 records</div>
+<button class="export-btn-header" onclick="exportFullReport()">Export Full Report</button>
+<button class="export-btn-header" onclick="exportVisualReport()">Export Visual Report</button>
+</div>
+</header>
+<div class="layout">
+<aside class="sidebar">
+<div class="sidebar-section">
+<div class="sidebar-heading">Upload Data</div>
+<div class="upload-zone" id="uploadZone">
+<div class="upload-icon">📂</div>
+<div class="upload-text"><strong>Click to upload</strong> or drag & drop<br>Excel files (.xlsx, .xls)</div>
+<input type="file" id="fileInput" accept=".xlsx,.xls" multiple>
+</div>
+<div class="file-list" id="fileList"></div>
+</div>
+<div class="sidebar-section">
+<div class="sidebar-heading">Navigation</div>
+<button class="nav-item active" onclick="showPage('overview')" data-page="overview"><span class="nav-icon">◻</span> Overview</button>
+<button class="nav-item" onclick="showPage('table')" data-page="table"><span class="nav-icon">☰</span> Data Table</button>
+<button class="nav-item" onclick="showPage('charts')" data-page="charts"><span class="nav-icon">▦</span> Visualizations</button>
+<button class="nav-item" onclick="showPage('qualitative')" data-page="qualitative"><span class="nav-icon">❝</span> Qualitative View</button>
+<button class="nav-item" onclick="showPage('quotebank')" data-page="quotebank"><span class="nav-icon">★</span> Quote Bank</button>
+</div>
+<div class="sidebar-section">
+<div class="sidebar-heading">Filters</div>
+<div class="filter-group"><label class="filter-label">Term</label><select id="filterTerm" onchange="applyFilters()"><option value="">All terms</option></select></div>
+<div class="filter-group"><label class="filter-label">Employer</label><select id="filterEmployer" onchange="applyFilters()"><option value="">All employers</option></select></div>
+<div class="filter-group"><label class="filter-label">Major</label><select id="filterMajor" onchange="applyFilters()"><option value="">All majors</option></select></div>
+<div class="filter-group"><label class="filter-label">Evaluation Type</label><select id="filterEvalType" onchange="applyFilters()"><option value="">All types</option><option value="Final">Final</option><option value="Midterm">Midterm</option></select></div>
+<div class="filter-group"><label class="filter-label">UMW Affiliation</label><select id="filterUmwAffiliation" onchange="applyFilters()"><option value="">All</option><option value="umw">UMW Affiliated</option><option value="external">External</option></select></div>
+<div class="filter-group"><label class="filter-label">Job Offered</label><select id="filterJobOffered" onchange="applyFilters()"><option value="">All</option><option value="Yes">Yes</option><option value="No">No</option></select></div>
+<button class="clear-btn" onclick="clearFilters()">Clear all filters</button>
+</div>
+<div class="sidebar-section">
+<div class="sidebar-heading">UMW Tags</div>
+<div id="tagWarning"></div>
+<div class="tag-input-row">
+<input type="text" id="tagInput" class="tag-input" placeholder="e.g., Writing Center">
+<button class="tag-add-btn" onclick="addTag()">Add Tag</button>
+</div>
+<div class="tag-list" id="tagList"></div>
+<div class="tag-import-export">
+<button class="tag-ie-btn" onclick="exportTags()">Export Tags</button>
+<button class="tag-ie-btn" onclick="document.getElementById('tagImportInput').click()">Import Tags</button>
+<input type="file" id="tagImportInput" accept=".json" style="display:none" onchange="importTags(event)">
+</div>
+<div class="tag-note">💡 Tag any UMW department or office that doesn't automatically include "UMW" in the name. These tags persist across all future uploads and support fuzzy matching for name variations.</div>
+</div>
+</aside>
+<main class="main">
+<div class="page active" id="page-overview">
+<div class="page-heading">Overview</div>
+<div class="page-sub" id="overviewSub">Upload Excel evaluation files to get started.</div>
+<div id="overviewContent"><div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No data yet</div><div class="empty-sub">Upload one or more Excel evaluation files using the sidebar to populate the dashboard.</div></div></div>
+</div>
+<div class="page" id="page-table">
+<div class="page-heading">Data Table</div>
+<div class="page-sub">All evaluation records. Click any row to expand qualitative details.</div>
+<div class="table-toolbar"><input class="search-box" type="text" id="searchBox" placeholder="Search by name, employer, or keyword…" oninput="renderTable()"><button class="export-btn" onclick="exportCSV()">Export CSV</button></div>
+<div class="table-wrap"><table><thead><tr><th style="width:32px;"></th><th onclick="sortTable('studentId')">ID</th><th onclick="sortTable('employer')">Employer</th><th onclick="sortTable('major')">Major</th><th onclick="sortTable('term')">Term</th><th onclick="sortTable('evalType')">Type</th><th onclick="sortTable('jobOffered')">Job Offered</th><th>Responsibilities (preview)</th></tr></thead><tbody id="tableBody"></tbody></table></div>
+<div class="pagination" id="tablePagination"></div>
+</div>
+<div class="page" id="page-charts">
+<div class="page-heading">Visualizations</div>
+<div class="page-sub">Charts generated from all filtered evaluation data. Patterns become more reliable with additional semesters of data.</div>
+<div id="chartsContent"><div class="empty-state"><div class="empty-icon">📈</div><div class="empty-title">No data yet</div><div class="empty-sub">Upload evaluation files to generate charts.</div></div></div>
+</div>
+<div class="page" id="page-qualitative">
+<div class="page-heading">Qualitative View</div>
+<div class="page-sub">Full open-ended responses, organized by intern and evaluation checkpoint.</div>
+<div class="qual-grid" id="qualContent"><div class="empty-state"><div class="empty-icon">❝</div><div class="empty-title">No data yet</div><div class="empty-sub">Upload evaluation files to see qualitative responses.</div></div></div>
+</div>
+<div class="page" id="page-quotebank">
+<div class="page-heading">Quote Bank</div>
+<div class="page-sub">Curated supervisor quotes, ready to copy for reports and communications.</div>
+<div class="quote-filter-row" id="qbFilters"><button class="qb-filter active" onclick="filterQuotes('all',this)">All</button><button class="qb-filter" onclick="filterQuotes('strengths',this)">Strengths</button><button class="qb-filter" onclick="filterQuotes('improvement',this)">Areas for Growth</button><button class="qb-filter" onclick="filterQuotes('impact',this)">Org Impact</button><button class="qb-filter" onclick="filterQuotes('feedback',this)">Feedback to UMW</button><button class="qb-filter" onclick="filterQuotes('support',this)">Support Plans</button></div>
+<div class="quote-list" id="quoteList"><div class="empty-state"><div class="empty-icon">★</div><div class="empty-title">No quotes yet</div><div class="empty-sub">Upload evaluation files to populate the quote bank.</div></div></div>
+</div>
+</main>
+</div>
+<div class="modal-overlay" id="phraseModal" onclick="closeModal(event)">
+<div class="modal"><div class="modal-header"><div><div class="modal-title" id="modalTitle">Theme</div><div class="modal-sub" id="modalSub"></div></div><button class="modal-close" onclick="document.getElementById('phraseModal').classList.remove('open')">×</button></div><div class="modal-body" id="modalBody"></div></div>
+</div>
+<div class="modal-overlay" id="employerModal" onclick="closeEmployerModal(event)">
+<div class="modal employer-modal"><div class="modal-header"><div><div class="modal-title" id="employerModalTitle">Employers</div><div class="modal-sub" id="employerModalSub"></div></div><button class="modal-close" onclick="document.getElementById('employerModal').classList.remove('open')">×</button></div><div class="modal-body" id="employerModalBody"></div></div>
+</div>
+<div class="modal-overlay" id="employerDetailModal" onclick="closeEmployerDetailModal(event)">
+<div class="modal employer-modal"><div class="modal-header"><div><div class="modal-title" id="employerDetailTitle">Employer Details</div><div class="modal-sub" id="employerDetailSub"></div></div><button class="modal-close" onclick="document.getElementById('employerDetailModal').classList.remove('open')">×</button></div><div class="modal-body" id="employerDetailBody"></div></div>
+</div>
+<div class="modal-overlay" id="employerDrillModal" onclick="closeEmployerDrillModal(event)">
+<div class="modal"><div class="modal-header"><div><div class="modal-title" id="employerDrillTitle">Details</div><div class="modal-sub" id="employerDrillSub"></div></div><button class="modal-close" onclick="document.getElementById('employerDrillModal').classList.remove('open')">×</button></div><div class="modal-body" id="employerDrillBody"></div></div>
+</div>
+<div class="modal-overlay" id="umwCategoryModal" onclick="closeUmwCategoryModal(event)">
+<div class="modal employer-modal"><div class="modal-header"><div><div class="modal-title" id="umwCategoryModalTitle">UMW Category</div><div class="modal-sub" id="umwCategoryModalSub"></div></div><button class="modal-close" onclick="document.getElementById('umwCategoryModal').classList.remove('open')">×</button></div><div class="modal-body" id="umwCategoryModalBody"></div></div>
+</div>
+<div class="modal-overlay" id="umwDeptModal" onclick="closeUmwDeptModal(event)">
+<div class="modal employer-modal"><div class="modal-header"><div><div class="modal-title" id="umwDeptModalTitle">Department</div><div class="modal-sub" id="umwDeptModalSub"></div></div><button class="modal-close" onclick="document.getElementById('umwDeptModal').classList.remove('open')">×</button></div><div class="modal-body" id="umwDeptModalBody"></div></div>
+</div>
+<div class="toast" id="toast"></div>
+<button class="debug-toggle" onclick="toggleDebug()">🐛 Debug</button>
+<div class="debug-panel" id="debugPanel">
+<div class="debug-header">
+<span>DEBUG LOG</span>
+<button class="debug-close" onclick="toggleDebug()">Close</button>
+</div>
+<div class="debug-content" id="debugContent"></div>
+</div>
+<script>
+let allData=[],filteredData=[],uploadedFiles=[],sortKey='',sortDir=1,currentPage=1;
+const PAGE_SIZE=15;
+let activeQuoteFilter='all',charts={},currentStrengthThemes=[],currentImprovThemes=[],currentEmployerData=null;
+let debugLog=[];
+
+function debugWrite(msg){
+console.log('[DEBUG]',msg);
+debugLog.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
+const el=document.getElementById('debugContent');
+if(el){
+el.innerHTML=debugLog.slice(-50).map(l=>`<div>${escapeHtml(l)}</div>`).join('');
+el.scrollTop=el.scrollHeight;
+}
+}
+
+function toggleDebug(){
+document.getElementById('debugPanel').classList.toggle('open');
+}
+
+// ========================================
+// MANUAL TAGGING SYSTEM - LOCALSTORAGE
+// ========================================
+const TAGS_STORAGE_KEY = 'ccpd_uwm_tags';
+let manualTags = [];
+
+function normalizeForTagMatch(str) {
+  if (!str) return '';
+  return String(str)
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\b(the|of|for|at|and|a|an|in|on|to|from)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function loadTags() {
+  try {
+    const stored = localStorage.getItem(TAGS_STORAGE_KEY);
+    if (stored) {
+      manualTags = JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error('Error loading tags:', e);
+    manualTags = [];
+  }
+  renderTagList();
+  checkLocalStorageAvailable();
+}
+
+function saveTags() {
+  try {
+    localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(manualTags));
+  } catch (e) {
+    console.error('Error saving tags:', e);
+    showToast('Error saving tags');
+  }
+}
+
+function checkLocalStorageAvailable() {
+  try {
+    const test = '__storage_test__';
+    localStorage.setItem(test, test);
+    localStorage.removeItem(test);
+    document.getElementById('tagWarning').innerHTML = '';
+  } catch (e) {
+    document.getElementById('tagWarning').innerHTML = '<div class="tag-warning"><span class="tag-warning-icon">⚠</span><span>Private browsing detected. Tags will not persist after closing the browser.</span></div>';
+  }
+}
+
+function addTag() {
+  const input = document.getElementById('tagInput');
+  const tagText = input.value.trim();
+  
+  if (!tagText) return;
+  
+  const normalized = normalizeForTagMatch(tagText);
+  
+  const exists = manualTags.find(t => t.normalized === normalized);
+  if (exists) {
+    showToast('Already tagged: ' + exists.original);
+    input.value = '';
+    return;
+  }
+  
+  const newTag = {
+    original: tagText,
+    normalized: normalized,
+    label: tagText,
+    timestamp: Date.now()
+  };
+  
+  manualTags.push(newTag);
+  saveTags();
+  renderTagList();
+  input.value = '';
+  
+  allData = buildUnifiedDataset();
+  applyFilters();
+  
+  showToast('Tagged: ' + tagText);
+}
+
+function removeTag(index) {
+  const tag = manualTags[index];
+  if (!tag) return;
+  
+  if (confirm(`Remove UMW tag: "${tag.label}"?`)) {
+    manualTags.splice(index, 1);
+    saveTags();
+    renderTagList();
+    
+    allData = buildUnifiedDataset();
+    applyFilters();
+    
+    showToast('Tag removed');
+  }
+}
+
+function isManuallyTaggedAsUmw(employerName) {
+  if (!employerName) return false;
+  const normalized = normalizeForTagMatch(employerName);
+  return manualTags.some(tag => {
+    return normalized.includes(tag.normalized) || tag.normalized.includes(normalized);
+  });
+}
+
+function renderTagList() {
+  const container = document.getElementById('tagList');
+  
+  if (manualTags.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-tertiary);font-size:12px;text-align:center;padding:1rem 0;">No tags yet</div>';
+    return;
+  }
+  
+  const tagCounts = manualTags.map((tag, index) => {
+    const count = allData.filter(r => isManuallyTaggedAsUmw(r.originalEmployer || r.employer)).length;
+    return { ...tag, count, index };
+  });
+  
+  container.innerHTML = tagCounts.map(tag => {
+    const displayName = tag.label.length > 40 ? tag.label.slice(0, 40) + '…' : tag.label;
+    const zeroClass = tag.count === 0 ? ' zero-matches' : '';
+    return `
+      <div class="tag-item${zeroClass}" title="${tag.label}">
+        <span class="tag-item-name">${displayName}</span>
+        <span class="tag-item-count">${tag.count}</span>
+        <span class="tag-item-remove" onclick="removeTag(${tag.index})">×</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function exportTags() {
+  if (manualTags.length === 0) {
+    showToast('No tags to export');
+    return;
+  }
+  
+  const json = JSON.stringify(manualTags, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ccpd_tags.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Tags exported');
+}
+
+function importTags(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) {
+        showToast('Invalid tag file format');
+        return;
+      }
+      
+      let addedCount = 0;
+      imported.forEach(importedTag => {
+        const exists = manualTags.find(t => t.normalized === importedTag.normalized);
+        if (!exists) {
+          manualTags.push(importedTag);
+          addedCount++;
+        }
+      });
+      
+      saveTags();
+      renderTagList();
+      
+      allData = buildUnifiedDataset();
+      applyFilters();
+      
+      showToast(`Imported ${addedCount} new tag${addedCount !== 1 ? 's' : ''}`);
+    } catch (err) {
+      showToast('Error importing tags: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ========================================
+// EMPLOYER NORMALIZATION (WITH MANUAL TAGS)
+// ========================================
+
+const UMW_EXCLUSIONS=['mary washington healthcare','mary washington hospital','mwhc'];
+const UMW_PATTERNS=[/mary\s*wash/i,/\bumw\b/i];
+
+function normalizeEmployer(name){
+  if(!name)return{normalized:'',original:''};
+  const original=name.trim();
+  const lower=original.toLowerCase().trim();
+  
+  for(const excl of UMW_EXCLUSIONS){
+    if(lower.includes(excl))return{normalized:original,original};
+  }
+  
+  for(const pattern of UMW_PATTERNS){
+    if(pattern.test(lower))return{normalized:'University of Mary Washington',original};
+  }
+  
+  if (isManuallyTaggedAsUmw(original)) {
+    return{normalized:'University of Mary Washington',original};
+  }
+  
+  return{normalized:original,original};
+}
+
+function normalizeJobOffered(val){
+if(!val)return'';
+const str=String(val).trim().toLowerCase();
+if(str==='yes'||str==='y'||str==='true'||str==='1'||str.includes('yes'))return'Yes';
+if(str==='no'||str==='n'||str==='false'||str==='0'||str.includes('no'))return'No';
+return'';
+}
+
+function stripNumericPrefix(str){
+if(!str)return'';
+return String(str).replace(/^\d+:\s*/,'').trim();
+}
+
+function normalizeText(str){
+if(!str)return'';
+return String(str)
+.replace(/â€™/g,"'")
+.replace(/â€œ/g,'"')
+.replace(/â€/g,'"')
+.replace(/â€"/g,'—')
+.replace(/â€"/g,'–')
+.replace(/'/g,"'")
+.replace(/"/g,'"')
+.replace(/"/g,'"')
+.trim();
+}
+
+const FIELD_MAP={
+student:['Student Name',"Student's Name",'Student'],
+employer:['Employer','Organization Name','Org Name'],
+major:['Student Major','Major'],
+term:['Term','Semester'],
+evalType:['Eval Type','Eval_Type','Evaluation Type'],
+workMode:['How did the intern perform their work?','How does the intern perform their work?','Work Mode'],
+hours:['Approximately how many work hours will the student have completed by the internship end date?','Hours'],
+satisfaction:["What is your overall level of satisfaction with the intern's work performance?",'Overall Satisfaction','Satisfaction'],
+responsibilities:["Please provide a brief description of the intern's work responsibilities.",'Work Responsibilities','Responsibilities'],
+strengths:["What strengths did the intern exhibit in performing their work duties?",'Strengths'],
+improvement:["What areas for improvement did the intern exhibit in performing their work duties?",'Areas for improvement','Improvement'],
+impact:["How has your organization been impacted by this internship experience?",'Organizational Impact','Impact'],
+feedback:["What general feedback would you like to share with UMW regarding internships?",'General Feedback','Feedback'],
+jobOffered:["Did the internship lead to permanent employment?","Was the student offered a job?","Job Offered","Employment Outcome","Offered Employment"],
+hostAgain:["Would you consider hosting another intern from UMW in a future semester?",'Host Again'],
+supervisorPlan:["How will you support the student's learning and development for the remainder of the internship?",'Support Plan'],
+uwmSupport:["How can UMW faculty and staff support you in fostering a successful internship experience?",'UMW Support Request'],
+midtermRating:["Please indicate the extent to which the student's work performance fulfills expectations of the internship role.",'Midterm Rating'],
+nace_career:["Career, Self-development, and Professionalism:","Career and Self-Development"],
+nace_civic:["Civic Engagement and Community Service:","Civic Engagement"],
+nace_comm:["Communication:","Communication"],
+nace_critical:["Critical Thinking and Problem Solving:","Critical Thinking"],
+nace_digital:["Digital Fluency:","Digital Technology"],
+nace_global:["Global Awareness and Intercultural Competence:","Global/Intercultural Fluency"],
+nace_leadership:["Leadership:","Leadership"],
+nace_connections:["Meaningful Connections:","Meaningful Connections"],
+nace_teamwork:["Teamwork and Collaboration:","Teamwork"],
+nace_wellbeing:["Well-being and Mindfulness:","Well-being"]
+};
+
+const NACE_LABELS={nace_career:'Career & Professionalism',nace_civic:'Civic Engagement',nace_comm:'Communication',nace_critical:'Critical Thinking',nace_digital:'Digital Fluency',nace_global:'Global Awareness',nace_leadership:'Leadership',nace_connections:'Meaningful Connections',nace_teamwork:'Teamwork & Collaboration',nace_wellbeing:'Well-being & Mindfulness'};
+
+const uploadZone=document.getElementById('uploadZone'),fileInput=document.getElementById('fileInput');
+uploadZone.addEventListener('click',()=>fileInput.click());
+uploadZone.addEventListener('dragover',e=>{e.preventDefault();uploadZone.classList.add('drag-over');});
+uploadZone.addEventListener('dragleave',()=>uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop',e=>{e.preventDefault();uploadZone.classList.remove('drag-over');handleFiles(e.dataTransfer.files);});
+fileInput.addEventListener('change',e=>handleFiles(e.target.files));
+
+function handleFiles(files){
+Array.from(files).forEach(file=>{
+if(uploadedFiles.find(f=>f.name===file.name)){
+showToast(`"${file.name}" already loaded`);
+return;
+}
+const reader=new FileReader();
+reader.onload=e=>{
+try{
+debugWrite(`Reading file: ${file.name}`);
+const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+const rows=parseWorkbook(wb,file.name);
+if(rows.length===0){
+showToast(`No data found in "${file.name}"`);
+return;
+}
+uploadedFiles.push({name:file.name,rows});
+allData=buildUnifiedDataset();
+applyFilters();
+populateFilterDropdowns();
+renderFileList();
+renderTagList();
+showToast(`Loaded ${rows.length} record(s) from "${file.name}"`);
+}catch(err){
+showToast(`Error reading "${file.name}": ${err.message}`);
+debugWrite(`ERROR: ${err.message}`);
+}
+};
+reader.readAsArrayBuffer(file);
+});
+fileInput.value='';
+}
+
+function detectEvalType(filename,row){
+if(row&&row['Eval Type'])return row['Eval Type'];
+if(row&&row['Eval_Type'])return row['Eval_Type'];
+const fl=filename.toLowerCase();
+if(fl.includes('final'))return'Final';
+if(fl.includes('midterm')||fl.includes('mid-term'))return'Midterm';
+return'';
+}
+
+function detectTerm(filename,row){
+if(row&&row['Term']&&row['Term']!=='')return row['Term'];
+const fl=filename.toLowerCase();
+if(fl.includes('first 8')||fl.includes('first_8'))return'First 8 Weeks';
+if(fl.includes('second 8')||fl.includes('second_8'))return'Second 8 Weeks';
+const monthMatch=fl.match(/(january|february|march|april|may|june|july|august|september|october|november|december)\s*(\d{4})/i);
+if(monthMatch)return`${monthMatch[1].charAt(0).toUpperCase()+monthMatch[1].slice(1).toLowerCase()} ${monthMatch[2]}`;
+if(fl.includes('spring'))return'Spring';
+if(fl.includes('fall'))return'Fall';
+if(fl.includes('summer'))return'Summer';
+return'';
+}
+
+function findCol(row,candidates){
+const keys=Object.keys(row);
+for(const c of candidates){
+const cLower=c.trim().toLowerCase();
+for(const k of keys){
+const strippedKey=stripNumericPrefix(k);
+const keyLower=strippedKey.toLowerCase();
+if(keyLower===cLower||keyLower.startsWith(cLower.slice(0,30))){
+const val=row[k];
+if(val!==undefined&&val!==null&&String(val).trim()!==''){
+return normalizeText(String(val).trim());
+}
+}
+}
+}
+for(const c of candidates){
+const cLower=c.trim().toLowerCase().slice(0,25);
+for(const k of keys){
+const strippedKey=stripNumericPrefix(k);
+const keyLower=strippedKey.toLowerCase();
+if(keyLower.includes(cLower)){
+const val=row[k];
+if(val!==undefined&&val!==null&&String(val).trim()!==''){
+return normalizeText(String(val).trim());
+}
+}
+}
+}
+return'';
+}
+
+function parseWorkbook(wb,filename){
+const results=[];
+wb.SheetNames.forEach(sheetName=>{
+const sheet=wb.Sheets[sheetName];
+const raw=XLSX.utils.sheet_to_json(sheet,{defval:'',raw:false});
+if(!raw.length)return;
+raw.forEach((row,idx)=>{
+const r={};
+for(const[key,candidates]of Object.entries(FIELD_MAP)){
+r[key]=findCol(row,candidates);
+}
+
+const keys=Object.keys(row);
+for(const k of keys){
+const strippedKey=stripNumericPrefix(k).toLowerCase();
+if(!r.student&&(strippedKey.includes("student's name")||strippedKey.includes("student name"))){
+r.student=normalizeText(String(row[k]||'').trim());
+}
+if(!r.employer&&(strippedKey.includes("organization name")||strippedKey.includes("employer"))){
+r.employer=normalizeText(String(row[k]||'').trim());
+}
+if(!r.major&&strippedKey.includes("major")){
+r.major=normalizeText(String(row[k]||'').trim());
+}
+if(!r.jobOffered&&(strippedKey.includes("employment")||strippedKey.includes("job offer")||strippedKey.includes("offered")||strippedKey.includes("permanent")||strippedKey.includes("hire"))){
+const rawVal=String(row[k]||'').trim();
+r.jobOffered=normalizeJobOffered(rawVal);
+if(r.jobOffered){
+debugWrite(`Found jobOffered via fallback: "${rawVal}" → "${r.jobOffered}"`);
+}
+}
+}
+
+const qaMap={};
+Object.keys(row).forEach(k=>{
+if(k.startsWith('Evaluation Custom Question')){
+const suffix=k.replace('Evaluation Custom Question','');
+const answerKey='Evaluation Custom Answer'+suffix;
+const q=String(row[k]||'').trim();
+const a=String(row[answerKey]||'').trim();
+if(q&&a&&a!=='nan')qaMap[q]=a;
+}
+});
+
+for(const[key,candidates]of Object.entries(FIELD_MAP)){
+if(!r[key]){
+for(const c of candidates){
+const match=Object.keys(qaMap).find(q=>q.toLowerCase().includes(c.toLowerCase().replace(':','').trim().slice(0,30)));
+if(match){
+r[key]=normalizeText(qaMap[match]);
+break;
+}
+}
+}
+}
+
+if(r.jobOffered){
+r.jobOffered=normalizeJobOffered(r.jobOffered);
+}
+
+if(!r.student)r.student=row['Student Name']||row["Student's Name"]||'';
+if(!r.employer)r.employer=row['Employer']||row['Organization Name']||'';
+if(!r.major)r.major=row['Student Major']||row['Major']||'';
+
+const{normalized,original}=normalizeEmployer(r.employer);
+r.employer=normalized;
+r.originalEmployer=original;
+r.isUmwAffiliated = (normalized === 'University of Mary Washington');
+
+if(!r.student&&!r.employer)return;
+
+r.studentId=anonymize(r.student);
+r.studentName=r.student;
+r.evalType=detectEvalType(filename,row);
+r.term=detectTerm(filename,row);
+r.sourceFile=filename;
+r.rowIndex=idx;
+
+results.push(r);
+});
+});
+return results;
+}
+
+const nameMap={};let nameCounter=1;
+function anonymize(name){if(!name)return'Unknown';if(!nameMap[name])nameMap[name]=`Intern ${String(nameCounter++).padStart(3,'0')}`;return nameMap[name];}
+
+function buildUnifiedDataset(){
+const seen=new Set(),combined=[];
+uploadedFiles.forEach(f=>{
+f.rows.forEach(r=>{
+const key=`${r.studentName}|${r.term}|${r.evalType}`;
+if(!seen.has(key)){
+seen.add(key);
+combined.push(r);
+}
+});
+});
+
+debugWrite(`Built unified dataset: ${combined.length} records`);
+const jobOfferedCount=combined.filter(r=>r.jobOffered).length;
+debugWrite(`Records with jobOffered in unified set: ${jobOfferedCount}`);
+if(jobOfferedCount>0){
+debugWrite(JSON.stringify(combined.slice(0,5).map(r=>({student:r.studentId,jobOffered:r.jobOffered})),null,2));
+}
+
+return combined;
+}
+
+function removeFile(name){
+uploadedFiles=uploadedFiles.filter(f=>f.name!==name);
+allData=buildUnifiedDataset();
+applyFilters();
+populateFilterDropdowns();
+renderFileList();
+}
+
+function renderFileList(){
+document.getElementById('fileList').innerHTML=uploadedFiles.map(f=>`<div class="file-pill"><span>✓</span><span class="file-pill-name">${f.name}</span><span class="file-pill-remove" onclick="removeFile('${f.name}')">×</span></div>`).join('');
+}
+
+function populateFilterDropdowns(){
+const terms=[...new Set(allData.map(r=>r.term).filter(Boolean))];
+const employers=[...new Set(allData.map(r=>r.employer).filter(Boolean))];
+const majors=[...new Set(allData.map(r=>r.major).filter(Boolean))];
+
+const termEl=document.getElementById('filterTerm'),curTerm=termEl.value;
+termEl.innerHTML='<option value="">All terms</option>'+terms.map(t=>`<option value="${t}"${t===curTerm?' selected':''}>${t}</option>`).join('');
+
+const empEl=document.getElementById('filterEmployer'),curEmp=empEl.value;
+empEl.innerHTML='<option value="">All employers</option>'+employers.map(e=>`<option value="${e}"${e===curEmp?' selected':''}>${e}</option>`).join('');
+
+const majEl=document.getElementById('filterMajor'),curMaj=majEl.value;
+majEl.innerHTML='<option value="">All majors</option>'+majors.map(m=>`<option value="${m}"${m===curMaj?' selected':''}>${m}</option>`).join('');
+}
+
+function applyFilters(){
+const term=document.getElementById('filterTerm').value,
+employer=document.getElementById('filterEmployer').value,
+major=document.getElementById('filterMajor').value,
+evalType=document.getElementById('filterEvalType').value,
+umwAffiliation=document.getElementById('filterUmwAffiliation').value,
+jobOffered=document.getElementById('filterJobOffered').value;
+
+filteredData=allData.filter(r=>{
+if(term&&r.term!==term)return false;
+if(employer&&r.employer!==employer)return false;
+if(major&&r.major!==major)return false;
+if(evalType&&r.evalType!==evalType)return false;
+if(umwAffiliation==='umw'&&!r.isUmwAffiliated)return false;
+if(umwAffiliation==='external'&&r.isUmwAffiliated)return false;
+if(jobOffered&&r.jobOffered!==jobOffered)return false;
+return true;
+});
+
+document.getElementById('recordCount').textContent=`${filteredData.length} record${filteredData.length!==1?'s':''}`;
+currentPage=1;
+renderAll();
+}
+
+function clearFilters(){
+document.getElementById('filterTerm').value='';
+document.getElementById('filterEmployer').value='';
+document.getElementById('filterMajor').value='';
+document.getElementById('filterEvalType').value='';
+document.getElementById('filterUmwAffiliation').value='';
+document.getElementById('filterJobOffered').value='';
+applyFilters();
+}
+
+function renderAll(){
+debugWrite('Rendering all views...');
+renderOverview();
+renderTable();
+renderCharts();
+renderQualitative();
+renderQuoteBank();
+}
+
+function defaultSort(data){
+return[...data].sort((a,b)=>{
+const idA=a.studentId||'',idB=b.studentId||'';
+if(idA<idB)return -1;
+if(idA>idB)return 1;
+const typeOrder={Midterm:0,Final:1,Unknown:2,'':3};
+const typeA=typeOrder[a.evalType]??3,typeB=typeOrder[b.evalType]??3;
+return typeA-typeB;
+});
+}
+
+function renderOverview(){
+const el=document.getElementById('overviewContent');
+if(!filteredData.length){
+el.innerHTML=`<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No data yet</div><div class="empty-sub">Upload one or more Excel evaluation files using the sidebar.</div></div>`;
+document.getElementById('overviewSub').textContent='Upload Excel evaluation files to get started.';
+return;
+}
+
+const total=filteredData.length,
+finals=filteredData.filter(r=>r.evalType==='Final').length,
+midterms=filteredData.filter(r=>r.evalType==='Midterm').length,
+employers=new Set(filteredData.map(r=>r.employer).filter(Boolean)).size,
+students=new Set(filteredData.map(r=>r.studentName).filter(Boolean)).size,
+umwCount=filteredData.filter(r=>r.isUmwAffiliated).length,
+umwPct=total>0?Math.round((umwCount/total)*100):0;
+
+const finalsWithJob=filteredData.filter(r=>r.evalType==='Final'&&r.jobOffered);
+const jobYes=finalsWithJob.filter(r=>r.jobOffered==='Yes').length;
+const jobOfferedPct=finalsWithJob.length>0?Math.round((jobYes/finalsWithJob.length)*100):0;
+
+debugWrite(`Job offer stats: ${jobYes} Yes out of ${finalsWithJob.length} finals`);
+
+const satisfied=filteredData.filter(r=>r.satisfaction?.toLowerCase().includes('very satisfied')).length,
+satPct=finals>0?Math.round((satisfied/finals)*100):0,
+hostAgain=filteredData.filter(r=>r.hostAgain?.toLowerCase()==='yes').length,
+hostPct=finals>0?Math.round((hostAgain/finals)*100):0;
+
+document.getElementById('overviewSub').textContent=`${total} evaluation record${total!==1?'s':''} across ${students} intern${students!==1?'s':''} and ${employers} employer${employers!==1?'s':''}.`;
+
+el.innerHTML=`
+<div class="stat-grid">
+<div class="stat-card">
+<div class="stat-label">Total records</div>
+<div class="stat-num">${total}</div>
+<div class="stat-context">${finals} final · ${midterms} midterm</div>
+</div>
+<div class="stat-card">
+<div class="stat-label">Unique interns</div>
+<div class="stat-num">${students}</div>
+<div class="stat-context">Across ${employers} employer site${employers!==1?'s':''}</div>
+</div>
+<div class="stat-card">
+<div class="stat-label">UMW-Affiliated</div>
+<div class="stat-num">${umwPct}%</div>
+<div class="stat-context">${umwCount} of ${total} internship${umwCount!==1?'s':''}</div>
+</div>
+<div class="stat-card highlight">
+<div class="stat-label">Job Offered</div>
+<div class="stat-num">${jobOfferedPct}%</div>
+<div class="stat-context">${jobYes} of ${finalsWithJob.length} final evals</div>
+</div>
+<div class="stat-card">
+<div class="stat-label">Very Satisfied</div>
+<div class="stat-num">${satPct}%</div>
+<div class="stat-context">Overall supervisor satisfaction (finals)</div>
+</div>
+<div class="stat-card">
+<div class="stat-label">Would host again</div>
+<div class="stat-num">${hostPct}%</div>
+<div class="stat-context">Supervisors willing to rehire UMW interns</div>
+</div>
+</div>
+<div class="chart-grid" style="margin-bottom:0;">
+<div class="chart-card">
+<div class="chart-title">Evaluation Breakdown</div>
+<div class="chart-sub">Including job offer outcomes</div>
+<div class="chart-canvas-wrap" style="height:160px;"><canvas id="overviewTypeChart"></canvas></div>
+</div>
+<div class="chart-card chart-card-clickable" onclick="openEmployerModal()">
+<div class="chart-title">Records per employer</div>
+<div class="chart-sub">Click to expand and see all employers</div>
+<div class="chart-canvas-wrap" style="height:160px;"><canvas id="overviewEmpChart"></canvas></div>
+</div>
+</div>`;
+
+setTimeout(()=>{
+const jobNo=finalsWithJob.length-jobYes;
+const jobUnknown=finals-finalsWithJob.length;
+
+renderOrDestroy('overviewTypeChart','doughnut',{
+labels:['Job Offered','No Job Offer','Midterm','Unknown'],
+datasets:[{
+data:[jobYes,jobNo,midterms,jobUnknown],
+backgroundColor:['#2F9E44','#E67700','#C92A2A','#C9CDD4'],
+borderWidth:0,
+hoverOffset:4
+}]
+},{
+plugins:{
+legend:{position:'right',labels:{boxWidth:12,font:{size:12}}}
+},
+cutout:'60%'
+});
+
+const empCounts={};
+filteredData.forEach(r=>{if(r.employer)empCounts[r.employer]=(empCounts[r.employer]||0)+1;});
+const empEntries=Object.entries(empCounts).sort((a,b)=>b[1]-a[1]);
+const empLabels=empEntries.slice(0,8).map(e=>e[0].length>18?e[0].slice(0,18)+'…':e[0]);
+const empVals=empEntries.slice(0,8).map(e=>e[1]);
+
+renderOrDestroy('overviewEmpChart','bar',{
+labels:empLabels,
+datasets:[{
+data:empVals,
+backgroundColor:'#748FFC',
+borderRadius:4,
+borderSkipped:false
+}]
+},{
+indexAxis:'y',
+plugins:{legend:{display:false}},
+scales:{
+x:{ticks:{font:{size:11}},grid:{color:'#E2E6EA'}},
+y:{ticks:{font:{size:11}},grid:{display:false}}
+}
+});
+},50);
+}
+
+let expandedRows=new Set();
+function sortTable(key){
+if(sortKey===key)sortDir*=-1;
+else{sortKey=key;sortDir=1;}
+document.querySelectorAll('th').forEach(th=>th.classList.remove('sort-asc','sort-desc'));
+const th=[...document.querySelectorAll('th')].find(t=>t.getAttribute('onclick')===`sortTable('${key}')`);
+if(th)th.classList.add(sortDir===1?'sort-asc':'sort-desc');
+renderTable();
+}
+
+function getSearched(){
+const q=(document.getElementById('searchBox')?.value||'').toLowerCase();
+if(!q)return defaultSort(filteredData);
+return defaultSort(filteredData.filter(r=>[r.studentId,r.employer,r.major,r.responsibilities,r.strengths,r.feedback].join(' ').toLowerCase().includes(q)));
+}
+
+function renderTable(){
+const body=document.getElementById('tableBody');
+if(!body)return;
+
+let data=getSearched();
+if(sortKey)data=[...data].sort((a,b)=>{
+const av=a[sortKey]||'',bv=b[sortKey]||'';
+return av<bv?-sortDir:av>bv?sortDir:0;
+});
+
+const total=data.length,pages=Math.ceil(total/PAGE_SIZE);
+currentPage=Math.min(currentPage,pages||1);
+const start=(currentPage-1)*PAGE_SIZE,pageData=data.slice(start,start+PAGE_SIZE);
+
+if(!total){
+body.innerHTML=`<tr><td colspan="8" style="text-align:center;color:var(--text-tertiary);padding:2rem;">No records match current filters.</td></tr>`;
+document.getElementById('tablePagination').innerHTML='';
+return;
+}
+
+body.innerHTML=pageData.map((r,i)=>{
+const ri=start+i,isExpanded=expandedRows.has(ri);
+const preview=(r.responsibilities||'—').slice(0,70)+((r.responsibilities||'').length>70?'…':'');
+const displayEmployer=r.employer==='University of Mary Washington'&&r.originalEmployer&&r.originalEmployer!==r.employer?`${r.employer} (${r.originalEmployer})`:r.employer;
+const umwBadge=r.isUmwAffiliated?'<span class="badge-umw">UMW</span>':'';
+const jobBadge=r.jobOffered==='Yes'?'<span class="badge badge-green">✓ Yes</span>':r.jobOffered==='No'?'<span class="badge badge-gray">No</span>':'<span style="color:var(--text-tertiary);font-size:11px;">—</span>';
+
+return`<tr class="${isExpanded?'expanded':''}" onclick="toggleRow(${ri})">
+<td><button class="expand-btn">${isExpanded?'−':'+'}</button></td>
+<td><span style="font-family:var(--mono);font-size:12px;">${r.studentId}</span></td>
+<td>${displayEmployer||'—'}${umwBadge}</td>
+<td style="color:var(--text-secondary);font-size:12px;">${r.major||'—'}</td>
+<td style="font-size:12px;color:var(--text-secondary);">${r.term||'—'}</td>
+<td><span class="badge ${r.evalType==='Final'?'badge-final':'badge-midterm'}">${r.evalType||'—'}</span></td>
+<td>${jobBadge}</td>
+<td style="color:var(--text-secondary);font-size:12px;">${preview}</td>
+</tr>${isExpanded?`<tr class="detail-row"><td colspan="8"><div class="detail-inner">
+<div class="detail-field"><div class="detail-field-label">Work Responsibilities</div><div class="detail-field-text">${r.responsibilities||'<span class="detail-field-empty">Not provided</span>'}</div></div>
+<div class="detail-field"><div class="detail-field-label">Job Offered</div><div class="detail-field-text">${r.jobOffered||'<span class="detail-field-empty">Not reported</span>'}</div></div>
+<div class="detail-field"><div class="detail-field-label">Strengths</div><div class="detail-field-text">${r.strengths||'<span class="detail-field-empty">Not provided</span>'}</div></div>
+<div class="detail-field"><div class="detail-field-label">Areas for Improvement</div><div class="detail-field-text">${r.improvement||'<span class="detail-field-empty">Not provided</span>'}</div></div>
+<div class="detail-field"><div class="detail-field-label">Organizational Impact</div><div class="detail-field-text">${r.impact||'<span class="detail-field-empty">Not provided</span>'}</div></div>
+<div class="detail-field full"><div class="detail-field-label">General Feedback to UMW</div><div class="detail-field-text">${r.feedback||'<span class="detail-field-empty">Not provided</span>'}</div></div>
+${r.supervisorPlan?`<div class="detail-field full"><div class="detail-field-label">Supervisor's Support Plan</div><div class="detail-field-text">${r.supervisorPlan}</div></div>`:''}</div></td></tr>`:''}`
+}).join('');
+
+const pag=document.getElementById('tablePagination');
+if(pages<=1){
+pag.innerHTML=`<div class="pagination-info">Showing ${total} record${total!==1?'s':''}</div>`;
+return;
+}
+
+let btns=`<div class="pagination-info">Showing ${start+1}–${Math.min(start+PAGE_SIZE,total)} of ${total}</div><div class="pagination-btns">`;
+btns+=`<button class="page-btn" onclick="changePage(${currentPage-1})" ${currentPage===1?'disabled':''}>←</button>`;
+for(let p=1;p<=pages;p++){
+if(pages>7&&Math.abs(p-currentPage)>2&&p!==1&&p!==pages){
+if(p===2||p===pages-1)btns+=`<span style="padding:5px 4px;color:var(--text-tertiary);">…</span>`;
+continue;
+}
+btns+=`<button class="page-btn ${p===currentPage?'active':''}" onclick="changePage(${p})">${p}</button>`;
+}
+btns+=`<button class="page-btn" onclick="changePage(${currentPage+1})" ${currentPage===pages?'disabled':''}>→</button></div>`;
+pag.innerHTML=btns;
+}
+
+function toggleRow(idx){
+if(expandedRows.has(idx))expandedRows.delete(idx);
+else expandedRows.add(idx);
+renderTable();
+}
+function changePage(p){currentPage=p;renderTable();}
+
+function renderOrDestroy(id,type,data,options={}){
+if(charts[id]){
+charts[id].destroy();
+delete charts[id];
+}
+
+const canvas=document.getElementById(id);
+if(!canvas){
+debugWrite(`Canvas not found: ${id}`);
+return;
+}
+
+const defaults={
+responsive:true,
+maintainAspectRatio:true,
+plugins:{
+legend:{display:false},
+tooltip:{bodyFont:{family:'Inter'},titleFont:{family:'Inter'}}
+},
+scales:type==='doughnut'||type==='pie'?{}:{
+x:{grid:{color:'#E2E6EA'},ticks:{font:{size:11,family:'Inter'}}},
+y:{grid:{color:'#E2E6EA'},ticks:{font:{size:11,family:'Inter'}}}
+}
+};
+
+try{
+charts[id]=new Chart(canvas,{type,data,options:mergeDeep(defaults,options)});
+debugWrite(`Chart rendered: ${id}`);
+}catch(err){
+debugWrite(`Chart error ${id}: ${err.message}`);
+}
+}
+
+function mergeDeep(target,source){
+const out=Object.assign({},target);
+Object.keys(source).forEach(k=>{
+if(source[k]&&typeof source[k]==='object'&&!Array.isArray(source[k]))out[k]=mergeDeep(target[k]||{},source[k]);
+else out[k]=source[k];
+});
+return out;
+}
+
+function wordBoundaryMatch(text,keyword){
+if(!text||!keyword)return false;
+const lowerText=text.toLowerCase();
+const lowerKey=keyword.toLowerCase();
+const escaped=lowerKey.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+const pattern=new RegExp('\\b'+escaped,'i');
+return pattern.test(lowerText);
+}
+
+function isEmptyResponse(text){
+if(!text)return true;
+const lower=text.toLowerCase().trim();
+const emptyPhrases=['n/a','na','none','none observed','not applicable','no areas','nothing','none at this time','none noted','no concerns','none identified','not applicable at this time','-','—',''];
+return emptyPhrases.includes(lower)||lower.length<3;
+}
+
+const STRENGTH_THEMES=[
+{label:'Communication Skills',advice:'Supervisors consistently praised interns who communicated proactively.',keys:['communicated','communicates','communicative','communication','clear','articulate','well spoken','explains','presenting','keeps us informed','asks good questions','responsive','updates','professional correspondence','express']},
+{label:'Initiative & Self-Direction',advice:'Interns who sought out tasks and took ownership stood out.',keys:['initiative','proactive','self-starter','self-directed','self-oriented','takes initiative','took initiative','eager','motivated','driven','without being asked','goes above','volunteers','seeks out','ownership']},
+{label:'Professionalism',advice:'Professional demeanor and positive attitude made lasting impressions.',keys:['professional','professionalism','positive attitude','attitude','reliable','dependable','punctual','on time','prepared','mature','responsible','trustworthy','respectful','courteous']},
+{label:'Attention to Detail',advice:'Accuracy and thoroughness were frequently praised.',keys:['attention to detail','detail oriented','detail-oriented','thorough','accurate','accuracy','meticulous','careful','quality','high quality','precise','catches errors','organized']},
+{label:'Quick Learner',advice:'Supervisors valued interns who absorbed information quickly.',keys:['quick learner','fast learner','learns quickly','quickly','picks up quickly','eager to learn','absorbs','adapts quickly','quick study','receptive','catches on','grasps concepts']},
+{label:'Technical Skills',advice:'Relevant technical abilities made interns immediately useful.',keys:['technical','software','computer','data','database','analytical','research','writing skills','excel','systems','technology','competent','knowledgeable','aptitude','skilled']},
+{label:'Teamwork',advice:'Being a reliable team member was highly valued.',keys:['team player','teamwork','collaborative','cooperates','works well with','supports','helpful','helps others','fits in','contributes','gets along','interpersonal']},
+{label:'Work Ethic',advice:'Dedication and follow-through were noticed by every supervisor.',keys:['hard worker','hard working','dedicated','diligent','strong work ethic','committed','consistent','effort','thorough','dependable','reliable','completes','follows through']}
+];
+
+const IMPROVEMENT_THEMES=[
+{label:'Confidence & Speaking Up',advice:'Many interns grew more confident over time. Speaking up in meetings accelerates growth.',keys:['confidence','confident','shy','quiet','reserved','timid','hesitant','speak up','voice','assertive','bold','nervous','come out of shell','self-assured','more vocal']},
+{label:'Asking for Help',advice:'Supervisors want you to ask questions early and often.',keys:['ask','question','help','assistance','guidance','clarify','clarification','unsure','uncertain','reach out','check in','sooner','earlier','dont hesitate','afraid to ask']},
+{label:'Taking Initiative',advice:'Seek out tasks and take ownership without waiting to be told.',keys:['initiative','proactive','direction','independent','ownership','waiting','seek out','take charge','self-directed','step up','without being asked','look for']},
+{label:'Time Management',advice:'Prioritizing tasks and meeting deadlines are skills employers notice immediately.',keys:['time','deadline','schedule','prioritize','organize','organization','late','early','pace','plan','workload','manage','balance','juggling']},
+{label:'Attention to Detail',advice:'Taking time to review work carefully builds trust with supervisors.',keys:['detail','error','mistake','typo','accurate','careful','careless','review','proofread','check','double check','thoroughness','polish','triple check']},
+{label:'Communication',advice:'Keep supervisors informed and follow up proactively.',keys:['communicate','communicating','update','inform','follow up','status','progress','respond','email','check in','touch base','let us know','more often']},
+{label:'Continued Growth',advice:'Every internship is a learning experience—embrace the growth mindset.',keys:['continue','develop','grow','improve','learn','experience','practice','build','strengthen','work on','needs to','could','should','would benefit','room for','still learning','new to','developing','getting comfortable']}
+];
+
+const IMPACT_PHRASES=[
+{phrase:'completed projects on time',keys:['completed','on time','finished','delivered','accomplished','deadline','met expectations']},
+{phrase:'filled a staffing need',keys:['staffing','staff','shortage','gap','essential','capacity','bandwidth','extra hands','coverage','busy']},
+{phrase:'increased productivity',keys:['productive','productivity','efficient','efficiency','faster','streamlined','output','throughput']},
+{phrase:'brought fresh perspective',keys:['fresh','perspective','ideas','enthusiasm','energy','new ideas','positive','bright','creative']},
+{phrase:'created deliverables',keys:['created','developed','built','produced','designed','deliverable','tangible','work product','final product']},
+{phrase:'supported operations',keys:['support','operations','day-to-day','daily','running','maintain','sustained','helped','assisted']},
+{phrase:'digitized records',keys:['digitized','database','records','archive','catalog','organized','data','files','documents']},
+{phrase:'strengthened partnerships',keys:['partnership','relationship','community','university','collaboration','connection','networking']},
+{phrase:'contributed creative work',keys:['creative','design','visual','graphics','marketing','beautiful','props','sets','fabrication','artwork']},
+{phrase:'grateful for contribution',keys:['grateful','thankful','appreciate','wonderful','amazing','fantastic','excellent','great','pleasure']}
+];
+
+const ADVICE_THEMES=[
+{label:'Communicate Proactively',advice:'Keep your supervisor informed. Send regular updates, ask clarifying questions early, and respond to emails promptly.',field:'improvement',keys:['communicate','communicating','update','email','reach out','check in','inform','ask','question']},
+{label:'Ask Questions Early',advice:"Don't wait until you're stuck. Supervisors appreciate when interns seek clarification before starting a task.",field:'improvement',keys:['ask','question','help','clarify','guidance','unsure','sooner','early','before']},
+{label:'Take Initiative',advice:'Look for ways to contribute beyond your assigned tasks. Volunteer for projects and seek out learning opportunities.',field:'strengths',keys:['initiative','proactive','self-starter','volunteers','seeks out','ownership','without being asked','eager']},
+{label:'Be Reliable & Professional',advice:'Show up on time, meet deadlines, and maintain a positive attitude. These basics make a strong impression.',field:'strengths',keys:['reliable','dependable','professional','on time','punctual','consistent','deadline','positive attitude']},
+{label:'Embrace the Learning Curve',advice:"Every internship involves new skills and challenges. Stay open to feedback and view mistakes as growth opportunities.",field:'improvement',keys:['learn','grow','develop','improve','feedback','new','practice','continue','experience']}
+];
+
+function countTheme(data,field,keys){
+return data.filter(r=>{
+const text=(r[field]||'').toLowerCase();
+if(isEmptyResponse(text))return false;
+return keys.some(k=>wordBoundaryMatch(text,k));
+}).length;
+}
+
+function countImpactPhrase(data,keys){
+return data.filter(r=>{
+const text=[(r.impact||''),(r.responsibilities||''),(r.feedback||'')].join(' ').toLowerCase();
+if(isEmptyResponse(text))return false;
+return keys.some(k=>wordBoundaryMatch(text,k));
+}).length;
+}
+
+function countAdviceTheme(data,theme){
+const field=theme.field;
+return data.filter(r=>{
+const text=(r[field]||'').toLowerCase();
+if(isEmptyResponse(text))return false;
+return theme.keys.some(k=>wordBoundaryMatch(text,k));
+}).length;
+}
+
+function renderCharts(){
+const el=document.getElementById('chartsContent');
+if(!filteredData.length){
+el.innerHTML=`<div class="empty-state"><div class="empty-icon">📈</div><div class="empty-title">No data yet</div><div class="empty-sub">Upload evaluation files to generate charts.</div></div>`;
+return;
+}
+
+Object.keys(charts).forEach(chartId=>{
+if(charts[chartId]){
+charts[chartId].destroy();
+delete charts[chartId];
+}
+});
+
+currentStrengthThemes=STRENGTH_THEMES.map(t=>({...t,count:countTheme(filteredData,'strengths',t.keys)})).sort((a,b)=>b.count-a.count);
+currentImprovThemes=IMPROVEMENT_THEMES.map(t=>({...t,count:countTheme(filteredData,'improvement',t.keys)})).sort((a,b)=>b.count-a.count);
+const impactCounts=IMPACT_PHRASES.map(p=>({...p,count:countImpactPhrase(filteredData,p.keys)})).filter(p=>p.count>0).sort((a,b)=>b.count-a.count);
+const adviceCounts=ADVICE_THEMES.map(t=>({...t,count:countAdviceTheme(filteredData,t)})).filter(t=>t.count>0);
+const naceKeys=Object.keys(NACE_LABELS);
+const naceCounts={};
+const finalRecs=filteredData.filter(r=>r.evalType==='Final');
+naceKeys.forEach(k=>{naceCounts[k]=finalRecs.filter(r=>(r[k]||'').toLowerCase().includes('strongly agree')).length;});
+
+const finalsWithJob=filteredData.filter(r=>r.evalType==='Final'&&r.jobOffered);
+const jobYes=finalsWithJob.filter(r=>r.jobOffered==='Yes').length;
+const jobNo=finalsWithJob.length-jobYes;
+
+el.innerHTML=`
+<div class="takeaways-card">
+<div class="chart-title">Advice for Future Interns</div>
+<div class="chart-sub">Key insights from supervisor feedback. Click any item to see source quotes.</div>
+<div class="takeaways-list" id="adviceList"></div>
+</div>
+<div class="chart-grid">
+<div class="chart-card">
+<div class="chart-title">Top Intern Strengths</div>
+<div class="chart-sub">Click any bar to see source quotes</div>
+<div class="chart-canvas-wrap" style="height:280px;"><canvas id="chartStrengths"></canvas></div>
+</div>
+<div class="chart-card">
+<div class="chart-title">Common Growth Areas</div>
+<div class="chart-sub">Click any bar to see source quotes</div>
+<div class="chart-canvas-wrap" style="height:280px;"><canvas id="chartImprov"></canvas></div>
+</div>
+${finalsWithJob.length>0?`<div class="chart-card"><div class="chart-title">Employment Outcomes</div><div class="chart-sub">${finalsWithJob.length} final eval${finalsWithJob.length!==1?'s':''} with job offer data</div><div class="chart-canvas-wrap" style="height:200px;"><canvas id="chartJobOffer"></canvas></div></div>`:''}
+<div class="chart-card ${finalsWithJob.length>0?'':'chart-grid-3'}">
+<div class="chart-title">Organizational Impact — Key Themes</div>
+<div class="chart-sub">Click any tag to see source quotes</div>
+<div id="impactCloudDiv" class="phrase-cloud-inner"></div>
+</div>
+</div>
+<div class="nace-table-wrap">
+<div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);">
+<div class="chart-title">NACE Competency Ratings — "Strongly Agree"</div>
+<div class="chart-sub" style="margin-bottom:0;">Final evaluations only · ${finalRecs.length} respondent${finalRecs.length!==1?'s':''}</div>
+</div>
+${naceKeys.map(k=>{
+const count=naceCounts[k];
+const pct=finalRecs.length?Math.round((count/finalRecs.length)*100):0;
+return`<div class="nace-bar-row"><div class="nace-bar-label">${NACE_LABELS[k]}</div><div class="nace-track"><div class="nace-fill" style="width:${pct}%"><span class="nace-pct">${pct>12?pct+'%':''}</span></div></div><div style="font-size:11px;color:var(--text-tertiary);width:60px;text-align:right;flex-shrink:0;">${count} / ${finalRecs.length}</div></div>`;
+}).join('')}
+</div>`;
+
+const al=document.getElementById('adviceList');
+if(al){
+al.innerHTML=adviceCounts.length?adviceCounts.map((t,i)=>`<div class="takeaway-item" onclick="openAdviceModal('${t.label.replace(/'/g,"\\'")}',${JSON.stringify(t.keys).replace(/"/g,'&quot;')},'${t.field}')"><div class="takeaway-rank">${i+1}</div><div class="takeaway-body"><div class="takeaway-theme">${t.label}</div><div class="takeaway-advice">${t.advice}</div></div><div class="takeaway-count">${t.count} eval${t.count!==1?'s':''}</div></div>`).join(''):`<div style="color:var(--text-tertiary);font-size:13px;">Upload more evaluations to generate advice.</div>`;
+}
+
+setTimeout(()=>{
+const vs=currentStrengthThemes.filter(t=>t.count>0);
+if(vs.length){
+const blues=['#3B5BDB','#4C6EF5','#748FFC','#91A7FF','#BAC8FF','#5C7CFA','#364FC7','#3B5BDB'];
+renderOrDestroy('chartStrengths','bar',{
+labels:vs.map(t=>t.label),
+datasets:[{data:vs.map(t=>t.count),backgroundColor:vs.map((_,i)=>blues[i%blues.length]),borderRadius:5,borderSkipped:false}]
+},{
+indexAxis:'y',
+onClick:(e,elements)=>{if(elements.length>0){const idx=elements[0].index;openStrengthModal(vs[idx].label,vs[idx].keys);}},
+plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x} eval${ctx.parsed.x!==1?'s':''} mentioned this`}}},
+scales:{x:{ticks:{stepSize:1,font:{size:11}},grid:{color:'#E2E6EA'},title:{display:true,text:'Number of evaluations',font:{size:11},color:'#9199A8'}},y:{ticks:{font:{size:11}},grid:{display:false}}}
+});
+}
+
+const vi=currentImprovThemes.filter(t=>t.count>0);
+if(vi.length){
+const ambers=['#E67700','#F59F00','#FAB005','#FCC419','#FFD43B','#E67700','#D9480F'];
+renderOrDestroy('chartImprov','bar',{
+labels:vi.map(t=>t.label),
+datasets:[{data:vi.map(t=>t.count),backgroundColor:vi.map((_,i)=>ambers[i%ambers.length]),borderRadius:5,borderSkipped:false}]
+},{
+indexAxis:'y',
+onClick:(e,elements)=>{if(elements.length>0){const idx=elements[0].index;openImprovModal(vi[idx].label,vi[idx].keys);}},
+plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x} eval${ctx.parsed.x!==1?'s':''} mentioned this`}}},
+scales:{x:{ticks:{stepSize:1,font:{size:11}},grid:{color:'#E2E6EA'},title:{display:true,text:'Number of evaluations',font:{size:11},color:'#9199A8'}},y:{ticks:{font:{size:11}},grid:{display:false}}}
+});
+}
+
+if(finalsWithJob.length>0){
+renderOrDestroy('chartJobOffer','doughnut',{
+labels:['Job Offered','No Job Offer'],
+datasets:[{data:[jobYes,jobNo],backgroundColor:['#2F9E44','#E67700'],borderWidth:0,hoverOffset:4}]
+},{plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:12}}}},cutout:'55%'});
+}
+},50);
+
+const cloudDiv=document.getElementById('impactCloudDiv');
+if(cloudDiv){
+const phraseColors=[['#3B5BDB','#EDF2FF'],['#2F9E44','#EBFBEE'],['#0C8599','#E3FAFC'],['#7950F2','#F3F0FF'],['#C92A2A','#FFF5F5'],['#E67700','#FFF9DB'],['#087F5B','#E6FCF5'],['#5C940D','#F4FCE3'],['#862E9C','#F8F0FC'],['#1864AB','#E7F5FF']];
+cloudDiv.innerHTML=!impactCounts.length?`<div style="color:var(--text-tertiary);font-size:13px;">No impact data found in current records.</div>`:impactCounts.map((p,i)=>{
+const[fg,bg]=phraseColors[i%phraseColors.length];
+const size=12+Math.round((p.count/impactCounts[0].count)*10);
+return`<span class="phrase-tag" onclick="openPhraseModal('${p.phrase.replace(/'/g,"\\'")}',${JSON.stringify(p.keys).replace(/"/g,'&quot;')},'${fg}')" style="font-size:${size}px;color:${fg};background:${bg};border:1px solid ${fg}22;cursor:pointer;">${p.phrase} <span style="font-size:10px;opacity:0.7;">(${p.count})</span></span>`;
+}).join('');
+}
+}
+
+function openStrengthModal(label,keys){openThemeModal(label,keys,'strengths','#3B5BDB');}
+function openImprovModal(label,keys){openThemeModal(label,keys,'improvement','#E67700');}
+
+function openThemeModal(label,keys,field,color){
+const excerpts=[];
+filteredData.forEach(r=>{
+const text=(r[field]||'').trim();
+if(!text||isEmptyResponse(text))return;
+if(keys.some(k=>wordBoundaryMatch(text,k))){
+const matchedKey=keys.find(k=>wordBoundaryMatch(text,k));
+excerpts.push({text,studentId:r.studentId,employer:r.employer||'—',originalEmployer:r.originalEmployer||r.employer,evalType:r.evalType,term:r.term,matchedKey});
+}
+});
+
+const seen=new Set();
+const unique=excerpts.filter(e=>{
+const sig=e.text+e.studentId;
+if(seen.has(sig))return false;
+seen.add(sig);
+return true;
+});
+
+document.getElementById('modalTitle').textContent=label;
+document.getElementById('modalSub').textContent=unique.length?`${unique.length} excerpt${unique.length!==1?'s':''} found — click × to close`:'No matching excerpts found';
+document.getElementById('modalBody').innerHTML=!unique.length?`<div class="modal-empty">No matching text found for this theme.</div>`:unique.map(e=>{
+let highlighted=escapeHtml(e.text);
+if(e.matchedKey){
+const re=new RegExp('('+e.matchedKey.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+highlighted=highlighted.replace(re,'<mark class="modal-excerpt-highlight">$1</mark>');
+}
+const displayEmp=e.employer==='University of Mary Washington'&&e.originalEmployer?e.originalEmployer:e.employer;
+return`<div class="modal-excerpt" style="border-left-color:${color};"><div class="modal-excerpt-text">${highlighted}</div><div class="modal-excerpt-meta"><span class="modal-excerpt-field" style="background:${color}18;color:${color};">Matched: ${e.matchedKey||'keyword'}</span><span class="modal-excerpt-source">${e.studentId} · ${displayEmp} · ${e.evalType} · ${e.term}</span></div></div>`;
+}).join('');
+document.getElementById('phraseModal').classList.add('open');
+}
+
+function openPhraseModal(phrase,keys,accentColor){
+const FIELDS=[{key:'impact',label:'Organizational Impact'},{key:'responsibilities',label:'Work Responsibilities'},{key:'feedback',label:'General Feedback'},{key:'strengths',label:'Strengths'}];
+const excerpts=[];
+filteredData.forEach(r=>{
+FIELDS.forEach(({key,label})=>{
+const text=(r[key]||'').trim();
+if(!text||isEmptyResponse(text))return;
+if(keys.some(k=>wordBoundaryMatch(text,k))){
+const matchedKey=keys.find(k=>wordBoundaryMatch(text,k));
+excerpts.push({text,label,studentId:r.studentId,employer:r.employer||'—',originalEmployer:r.originalEmployer||r.employer,evalType:r.evalType,term:r.term,matchedKey});
+}
+});
+});
+
+const seen=new Set();
+const unique=excerpts.filter(e=>{
+const sig=e.text+'|'+e.label+'|'+e.studentId;
+if(seen.has(sig))return false;
+seen.add(sig);
+return true;
+});
+
+document.getElementById('modalTitle').textContent=`"${phrase}"`;
+document.getElementById('modalSub').textContent=unique.length?`${unique.length} excerpt${unique.length!==1?'s':''} — click × to close`:'No matching excerpts found';
+document.getElementById('modalBody').innerHTML=!unique.length?`<div class="modal-empty">No matching text found in the current dataset for this theme.</div>`:unique.map(e=>{
+let highlighted=escapeHtml(e.text);
+if(e.matchedKey){
+const re=new RegExp('('+e.matchedKey.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+highlighted=highlighted.replace(re,'<mark class="modal-excerpt-highlight">$1</mark>');
+}
+const displayEmp=e.employer==='University of Mary Washington'&&e.originalEmployer?e.originalEmployer:e.employer;
+return`<div class="modal-excerpt" style="border-left-color:${accentColor};"><div class="modal-excerpt-text">${highlighted}</div><div class="modal-excerpt-meta"><span class="modal-excerpt-field" style="background:${accentColor}18;color:${accentColor};">${e.label}</span><span class="modal-excerpt-field" style="background:#f0f0f0;color:#666;">Matched: ${e.matchedKey||'keyword'}</span><span class="modal-excerpt-source">${e.studentId} · ${displayEmp} · ${e.evalType} · ${e.term}</span></div></div>`;
+}).join('');
+document.getElementById('phraseModal').classList.add('open');
+}
+
+function openAdviceModal(label,keys,field){
+const excerpts=[];
+const fieldsToSearch=field==='strengths'?['strengths']:field==='improvement'?['improvement','feedback']:['strengths','improvement','feedback'];
+filteredData.forEach(r=>{
+fieldsToSearch.forEach(f=>{
+const text=(r[f]||'').trim();
+if(!text||isEmptyResponse(text))return;
+if(keys.some(k=>wordBoundaryMatch(text,k))){
+const matchedKey=keys.find(k=>wordBoundaryMatch(text,k));
+excerpts.push({text,field:f,studentId:r.studentId,employer:r.employer||'—',originalEmployer:r.originalEmployer||r.employer,evalType:r.evalType,term:r.term,matchedKey});
+}
+});
+});
+
+const seen=new Set();
+const unique=excerpts.filter(e=>{
+const sig=e.text+e.studentId+e.field;
+if(seen.has(sig))return false;
+seen.add(sig);
+return true;
+});
+
+document.getElementById('modalTitle').textContent=label;
+document.getElementById('modalSub').textContent=unique.length?`${unique.length} excerpt${unique.length!==1?'s':''} supporting this advice — click × to close`:'No matching excerpts found';
+document.getElementById('modalBody').innerHTML=!unique.length?`<div class="modal-empty">No matching text found for this advice.</div>`:unique.map(e=>{
+let highlighted=escapeHtml(e.text);
+if(e.matchedKey){
+const re=new RegExp('('+e.matchedKey.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+highlighted=highlighted.replace(re,'<mark class="modal-excerpt-highlight">$1</mark>');
+}
+const color=e.field==='strengths'?'#2F9E44':e.field==='improvement'?'#E67700':'#3B5BDB';
+const displayEmp=e.employer==='University of Mary Washington'&&e.originalEmployer?e.originalEmployer:e.employer;
+return`<div class="modal-excerpt" style="border-left-color:${color};"><div class="modal-excerpt-text">${highlighted}</div><div class="modal-excerpt-meta"><span class="modal-excerpt-field" style="background:${color}18;color:${color};">${e.field.charAt(0).toUpperCase()+e.field.slice(1)}</span><span class="modal-excerpt-field" style="background:#f0f0f0;color:#666;">Matched: ${e.matchedKey||'keyword'}</span><span class="modal-excerpt-source">${e.studentId} · ${displayEmp} · ${e.evalType} · ${e.term}</span></div></div>`;
+}).join('');
+document.getElementById('phraseModal').classList.add('open');
+}
+
+function closeModal(e){if(e.target===document.getElementById('phraseModal'))document.getElementById('phraseModal').classList.remove('open');}
+
+// ========================================
+// EMPLOYER MODAL WITH CLICK-TO-TAG
+// ========================================
+
+function extractCoreDeptName(original) {
+  let cleaned = original.toLowerCase().trim();
+  
+  cleaned = cleaned.replace(/^university\s+of\s+mary\s+wash(ington)?[\s\-]*/i, '');
+  cleaned = cleaned.replace(/^umw[\s\-]*/i, '');
+  cleaned = cleaned.replace(/^mary\s+wash(ington)?[\s\-]*/i, '');
+  
+  cleaned = cleaned.replace(/^(the|a|an)\s+/i, '');
+  
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  const athleticsKeywords = ['athletic', 'baseball', 'basketball', 'football', 'soccer', 'tennis', 'lacrosse', 'rugby', 'volleyball', 'softball', 'track', 'field', 'swim', 'golf', 'wrestling', 'cheer', 'sport'];
+  if (athleticsKeywords.some(kw => cleaned.includes(kw))) {
+    return 'Athletics';
+  }
+  
+  if (!cleaned || cleaned === 'university of mary washington' || cleaned === 'umw' || cleaned === 'mary washington') {
+    return 'University of Mary Washington';
+  }
+  
+  return original.trim();
+}
+
+function getUmwCategories(umwData){
+  const categories={
+    auto:{name:'University of Mary Washington',icon:'🎓',description:'Auto-detected departments',items:{}},
+    tagged:{name:'UMW Tags',icon:'🏷️',description:'Manually tagged departments',items:{}}
+  };
+  
+  umwData.forEach(r=>{
+    const orig=(r.originalEmployer||'').trim();
+    if(!orig)return;
+    
+    const isManualTag = isManuallyTaggedAsUmw(orig) && !UMW_PATTERNS.some(p => p.test(orig));
+    const category = isManualTag ? 'tagged' : 'auto';
+    
+    const coreName = extractCoreDeptName(orig);
+    
+    if(!categories[category].items[coreName])categories[category].items[coreName]=[];
+    categories[category].items[coreName].push(r);
+  });
+  
+  return categories;
+}
+
+function openEmployerModal(){
+  const empCounts={};
+  filteredData.forEach(r=>{if(r.employer)empCounts[r.employer]=(empCounts[r.employer]||0)+1;});
+  const sorted=Object.entries(empCounts).sort((a,b)=>b[1]-a[1]);
+  const total=sorted.reduce((sum,e)=>sum+e[1],0);
+  
+  document.getElementById('employerModalTitle').textContent='Records per Employer';
+  document.getElementById('employerModalSub').textContent=`${sorted.length} employers · ${total} total records — Click any employer for details or tag as UMW`;
+  
+  let html=`<input type="text" id="employerSearchInput" class="employer-search" placeholder="Search employers..." oninput="filterEmployerList()">`;
+  html+=`<div class="chart-canvas-wrap" style="height:400px;margin-bottom:1rem;"><canvas id="employerExpandedChart"></canvas></div>`;
+  
+  const umwEmployers = sorted.filter(([emp]) => empCounts[emp] && filteredData.some(r => r.employer === emp && r.isUmwAffiliated));
+  const externalEmployers = sorted.filter(([emp]) => empCounts[emp] && !filteredData.some(r => r.employer === emp && r.isUmwAffiliated));
+  
+  html += `<div id="employerListContainer">`;
+  
+  if (umwEmployers.length) {
+    html += `<div class="employer-section-title">🎓 UMW Affiliated (${umwEmployers.length})</div>`;
+    umwEmployers.forEach(([emp,count])=>{
+      const pct=Math.round((count/total)*100);
+      html+=`<div class="employer-row" data-employer-name="${emp.toLowerCase()}"><div class="employer-row-name" onclick="openEmployerDetail('${emp.replace(/'/g,"\\'")}')" style="cursor:pointer;">${emp}</div><div class="employer-row-count">${count}</div><div class="employer-row-badge">★ UMW</div></div>`;
+    });
+  }
+  
+  if (externalEmployers.length) {
+    html += `<div class="employer-section-title">🏢 External Employers (${externalEmployers.length})</div>`;
+    externalEmployers.forEach(([emp,count])=>{
+      const pct=Math.round((count/total)*100);
+      html+=`<div class="employer-row" data-employer-name="${emp.toLowerCase()}"><div class="employer-row-name" onclick="openEmployerDetail('${emp.replace(/'/g,"\\'")}')" style="cursor:pointer;flex:1;">${emp}</div><div class="employer-row-count">${count}</div><button class="employer-row-tag-btn" onclick="event.stopPropagation();tagEmployerAsUmw('${emp.replace(/'/g,"\\'")}')">+ Tag as UMW</button></div>`;
+    });
+  }
+  
+  html += `</div>`;
+  
+  document.getElementById('employerModalBody').innerHTML=html;
+  document.getElementById('employerModal').classList.add('open');
+  
+  setTimeout(()=>{
+    const labels=sorted.slice(0,30).map(e=>e[0].length>25?e[0].slice(0,25)+'…':e[0]);
+    const data=sorted.slice(0,30).map(e=>e[1]);
+    renderOrDestroy('employerExpandedChart','bar',{labels,datasets:[{data,backgroundColor:'#748FFC',borderRadius:4}]},{indexAxis:'y',onClick:(e,elements)=>{if(elements.length>0){const idx=elements[0].index;openEmployerDetail(sorted[idx][0]);}},plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}},grid:{color:'#E2E6EA'}},y:{ticks:{font:{size:10}},grid:{display:false}}}});
+  },100);
+}
+
+function filterEmployerList() {
+  const searchTerm = document.getElementById('employerSearchInput').value.toLowerCase();
+  const rows = document.querySelectorAll('.employer-row');
+  rows.forEach(row => {
+    const empName = row.getAttribute('data-employer-name');
+    if (empName.includes(searchTerm)) {
+      row.style.display = 'flex';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+
+function tagEmployerAsUmw(employerName) {
+  const normalized = normalizeForTagMatch(employerName);
+  const exists = manualTags.find(t => t.normalized === normalized);
+  if (exists) {
+    showToast('Already tagged: ' + exists.original);
+    return;
+  }
+  
+  const newTag = {
+    original: employerName,
+    normalized: normalized,
+    label: employerName,
+    timestamp: Date.now()
+  };
+  
+  manualTags.push(newTag);
+  saveTags();
+  renderTagList();
+  
+  allData = buildUnifiedDataset();
+  applyFilters();
+  
+  showToast('Tagged: ' + employerName);
+  
+  document.getElementById('employerModal').classList.remove('open');
+  setTimeout(() => openEmployerModal(), 100);
+}
+
+function closeEmployerModal(e){if(e.target===document.getElementById('employerModal'))document.getElementById('employerModal').classList.remove('open');}
+
+function openEmployerDetail(employer){
+currentEmployerData=filteredData.filter(r=>r.employer===employer);
+const empData=currentEmployerData;
+const total=empData.length;
+const uniqueInterns=new Set(empData.map(r=>r.studentId)).size;
+const finals=empData.filter(r=>r.evalType==='Final').length;
+const midterms=empData.filter(r=>r.evalType==='Midterm').length;
+
+const finalsWithJob=empData.filter(r=>r.evalType==='Final'&&r.jobOffered);
+const jobYes=finalsWithJob.filter(r=>r.jobOffered==='Yes').length;
+const jobPct=finalsWithJob.length>0?Math.round((jobYes/finalsWithJob.length)*100):0;
+
+const strengthCounts=STRENGTH_THEMES.map(t=>({...t,count:countTheme(empData,'strengths',t.keys)})).filter(t=>t.count>0).sort((a,b)=>b.count-a.count);
+const improvCounts=IMPROVEMENT_THEMES.map(t=>({...t,count:countTheme(empData,'improvement',t.keys)})).filter(t=>t.count>0).sort((a,b)=>b.count-a.count);
+const empFinals=empData.filter(r=>r.evalType==='Final');
+const naceKeys=Object.keys(NACE_LABELS);
+const naceCounts={};
+naceKeys.forEach(k=>{naceCounts[k]=empFinals.filter(r=>(r[k]||'').toLowerCase().includes('strongly agree')).length;});
+
+document.getElementById('employerDetailTitle').textContent=employer;
+document.getElementById('employerDetailSub').textContent=`${total} evaluation${total!==1?'s':''} · ${uniqueInterns} intern${uniqueInterns!==1?'s':''}`;
+
+let html=`<button class="modal-back-btn" onclick="document.getElementById('employerDetailModal').classList.remove('open');document.getElementById('employerModal').classList.add('open');">← Back to all employers</button>`;
+html+=`<div class="employer-stat-grid">
+<div class="employer-stat"><div class="employer-stat-num">${total}</div><div class="employer-stat-label">Evaluations</div></div>
+<div class="employer-stat"><div class="employer-stat-num">${uniqueInterns}</div><div class="employer-stat-label">Interns</div></div>
+<div class="employer-stat"><div class="employer-stat-num">${midterms}</div><div class="employer-stat-label">Midterm</div></div>
+<div class="employer-stat"><div class="employer-stat-num">${finals}</div><div class="employer-stat-label">Final</div></div>
+</div>`;
+
+if(finalsWithJob.length>0){
+html+=`<div class="employer-stat-grid" style="grid-template-columns:1fr;"><div class="employer-stat" style="background:linear-gradient(135deg,#2F9E44,#51cf66);color:white;"><div class="employer-stat-num" style="color:white;">${jobPct}%</div><div class="employer-stat-label" style="color:rgba(255,255,255,0.95);">Job Offer Rate (${jobYes} of ${finalsWithJob.length})</div></div></div>`;
+}
+
+if(employer==='University of Mary Washington'){
+const categories=getUmwCategories(empData);
+html+=`<div class="employer-detail-section"><div class="employer-detail-title">📁 Departments & Offices <span>(Click to explore)</span></div><div class="umw-category-grid">`;
+for(const[catKey,cat]of Object.entries(categories)){
+const itemCount=Object.keys(cat.items).length;
+const internCount=new Set(Object.values(cat.items).flat().map(r=>r.studentId)).size;
+if(itemCount>0){
+html+=`<div class="umw-category-card" onclick="openUmwCategoryModal('${catKey}')"><div class="umw-category-icon">${cat.icon}</div><div class="umw-category-name">${cat.name}</div><div class="umw-category-count">${itemCount} department${itemCount!==1?'s':''} · ${internCount} intern${internCount!==1?'s':''}</div></div>`;
+}
+}
+html+=`</div></div>`;
+}
+
+if(strengthCounts.length){
+html+=`<div class="employer-detail-section"><div class="employer-detail-title">📊 Top Strengths <span>(click for details)</span></div>`;
+const maxS=strengthCounts[0]?.count||1;
+strengthCounts.slice(0,5).forEach(t=>{
+const pct=Math.round((t.count/maxS)*100);
+html+=`<div class="theme-bar" onclick="openEmployerStrengthDrill('${employer.replace(/'/g,"\\'")}','${t.label.replace(/'/g,"\\'")}',${JSON.stringify(t.keys).replace(/"/g,'&quot;')})"><div class="theme-bar-label">${t.label}</div><div class="theme-bar-track"><div class="theme-bar-fill" style="width:${pct}%;background:linear-gradient(90deg,#3B5BDB,#748FFC);"><span>${t.count}</span></div></div></div>`;
+});
+html+=`</div>`;
+}
+
+if(improvCounts.length){
+html+=`<div class="employer-detail-section"><div class="employer-detail-title">📈 Growth Areas <span>(click for details)</span></div>`;
+const maxI=improvCounts[0]?.count||1;
+improvCounts.slice(0,5).forEach(t=>{
+const pct=Math.round((t.count/maxI)*100);
+html+=`<div class="theme-bar" onclick="openEmployerImprovDrill('${employer.replace(/'/g,"\\'")}','${t.label.replace(/'/g,"\\'")}',${JSON.stringify(t.keys).replace(/"/g,'&quot;')})"><div class="theme-bar-label">${t.label}</div><div class="theme-bar-track"><div class="theme-bar-fill" style="width:${pct}%;background:linear-gradient(90deg,#E67700,#FAB005);"><span>${t.count}</span></div></div></div>`;
+});
+html+=`</div>`;
+}
+
+if(empFinals.length){
+html+=`<div class="employer-detail-section"><div class="employer-detail-title">🎯 NACE Competencies <span>(${empFinals.length} final eval${empFinals.length!==1?'s':''})</span></div>`;
+naceKeys.forEach(k=>{
+const count=naceCounts[k];
+const pct=empFinals.length?Math.round((count/empFinals.length)*100):0;
+html+=`<div class="theme-bar" onclick="openEmployerNaceDrill('${employer.replace(/'/g,"\\'")}','${NACE_LABELS[k].replace(/'/g,"\\'")}','${k}')"><div class="theme-bar-label">${NACE_LABELS[k]}</div><div class="theme-bar-track"><div class="theme-bar-fill" style="width:${pct}%;background:linear-gradient(90deg,#7950F2,#B197FC);"><span>${pct}%</span></div></div><div class="theme-bar-count">${count}/${empFinals.length}</div></div>`;
+});
+html+=`</div>`;
+}
+
+html+=`<div class="employer-detail-section"><div class="employer-detail-title">💬 Sample Quotes</div>`;
+const quotes=[];
+empData.forEach(r=>{
+if(r.strengths&&!isEmptyResponse(r.strengths))quotes.push({text:r.strengths,type:'Strength',intern:r.studentId,dept:r.originalEmployer});
+if(r.impact&&!isEmptyResponse(r.impact))quotes.push({text:r.impact,type:'Impact',intern:r.studentId,dept:r.originalEmployer});
+});
+quotes.slice(0,3).forEach(q=>{
+html+=`<div class="modal-excerpt" style="border-left-color:${q.type==='Strength'?'#2F9E44':'#3B5BDB'};margin-bottom:8px;"><div class="modal-excerpt-text" style="font-size:12px;">"${escapeHtml(q.text.slice(0,200))}${q.text.length>200?'...':''}"</div><div class="modal-excerpt-meta"><span class="modal-excerpt-field">${q.type}</span><span class="modal-excerpt-source">${q.intern}${q.dept?' · '+q.dept:''}</span></div></div>`;
+});
+html+=`<button class="view-all-btn" onclick="openEmployerQuotesDrill('${employer.replace(/'/g,"\\'")}')">View All Quotes (${quotes.length})</button></div>`;
+
+document.getElementById('employerDetailBody').innerHTML=html;
+document.getElementById('employerModal').classList.remove('open');
+document.getElementById('employerDetailModal').classList.add('open');
+}
+
+function closeEmployerDetailModal(e){if(e.target===document.getElementById('employerDetailModal'))document.getElementById('employerDetailModal').classList.remove('open');}
+
+function openUmwCategoryModal(catKey){
+const umwData=filteredData.filter(r=>r.employer==='University of Mary Washington');
+const categories=getUmwCategories(umwData);
+const cat=categories[catKey];
+if(!cat)return;
+const depts=Object.entries(cat.items).map(([name,records])=>{
+const uniqueInterns=new Set(records.map(r=>r.studentId)).size;
+return{name,records,uniqueInterns};
+}).sort((a,b)=>b.uniqueInterns-a.uniqueInterns);
+document.getElementById('umwCategoryModalTitle').textContent=cat.name;
+document.getElementById('umwCategoryModalSub').textContent=`${depts.length} department${depts.length!==1?'s':''} · Click any to see interns`;
+let html=`<button class="modal-back-btn" onclick="document.getElementById('umwCategoryModal').classList.remove('open');openEmployerDetail('University of Mary Washington');">← Back to UMW Overview</button>`;
+html+=`<div class="umw-dept-grid">`;
+depts.forEach(d=>{
+html+=`<div class="umw-dept-tile" onclick="openUmwDeptModal('${d.name.replace(/'/g,"\\'")}')"><span class="umw-dept-name">${d.name}</span><span class="umw-dept-count">${d.uniqueInterns} intern${d.uniqueInterns!==1?'s':''}</span></div>`;
+});
+html+=`</div>`;
+document.getElementById('umwCategoryModalBody').innerHTML=html;
+document.getElementById('employerDetailModal').classList.remove('open');
+document.getElementById('umwCategoryModal').classList.add('open');
+}
+
+function closeUmwCategoryModal(e){if(e.target===document.getElementById('umwCategoryModal'))document.getElementById('umwCategoryModal').classList.remove('open');}
+
+function openUmwDeptModal(deptName){
+const deptData=filteredData.filter(r=>extractCoreDeptName(r.originalEmployer||'')===deptName);
+const internGroups={};
+deptData.forEach(r=>{
+if(!internGroups[r.studentId])internGroups[r.studentId]={records:[],studentId:r.studentId};
+internGroups[r.studentId].records.push(r);
+});
+const interns=Object.values(internGroups);
+document.getElementById('umwDeptModalTitle').textContent=deptName;
+document.getElementById('umwDeptModalSub').textContent=`${interns.length} intern${interns.length!==1?'s':''}`;
+let html=`<button class="modal-back-btn" onclick="document.getElementById('umwDeptModal').classList.remove('open');document.getElementById('umwCategoryModal').classList.add('open');">← Back to Category</button>`;
+interns.forEach(intern=>{
+const evalTypes=intern.records.map(r=>r.evalType).filter(Boolean);
+const majorSet=new Set(intern.records.map(r=>r.major).filter(Boolean));
+const termSet=new Set(intern.records.map(r=>r.term).filter(Boolean));
+const responsibilities=intern.records.find(r=>r.responsibilities)?.responsibilities||'Not provided';
+const jobOffered=intern.records.find(r=>r.jobOffered)?.jobOffered||'';
+const jobBadge=jobOffered==='Yes'?'<span class="badge badge-green">✓ Job Offered</span>':'';
+html+=`<div class="umw-intern-card"><div class="umw-intern-header"><span class="umw-intern-id">${intern.studentId}</span><div class="umw-intern-badges">${evalTypes.map(t=>`<span class="badge ${t==='Final'?'badge-final':'badge-midterm'}">${t}</span>`).join('')}${jobBadge}</div></div><div class="umw-intern-dept">${deptName}</div><div class="umw-intern-meta">Major: ${[...majorSet].join(', ')||'—'} · Term: ${[...termSet].join(', ')||'—'}</div><div class="umw-intern-resp">${responsibilities}</div></div>`;
+});
+const quotes=[];
+deptData.forEach(r=>{
+if(r.strengths&&!isEmptyResponse(r.strengths))quotes.push({text:r.strengths,type:'Strengths',intern:r.studentId,evalType:r.evalType});
+if(r.impact&&!isEmptyResponse(r.impact))quotes.push({text:r.impact,type:'Impact',intern:r.studentId,evalType:r.evalType});
+});
+if(quotes.length){
+html+=`<div class="employer-detail-section" style="margin-top:1.5rem;"><div class="employer-detail-title">💬 Quotes from ${deptName}</div>`;
+quotes.slice(0,5).forEach(q=>{
+html+=`<div class="modal-excerpt" style="border-left-color:${q.type==='Strengths'?'#2F9E44':'#3B5BDB'};margin-bottom:8px;"><div class="modal-excerpt-text" style="font-size:12px;">"${escapeHtml(q.text.slice(0,250))}${q.text.length>250?'...':''}"</div><div class="modal-excerpt-meta"><span class="modal-excerpt-field">${q.type}</span><span class="modal-excerpt-source">${q.intern} · ${q.evalType}</span></div></div>`;
+});
+html+=`</div>`;
+}
+document.getElementById('umwDeptModalBody').innerHTML=html;
+document.getElementById('umwCategoryModal').classList.remove('open');
+document.getElementById('umwDeptModal').classList.add('open');
+}
+
+function closeUmwDeptModal(e){if(e.target===document.getElementById('umwDeptModal'))document.getElementById('umwDeptModal').classList.remove('open');}
+
+function openEmployerStrengthDrill(employer,label,keys){const empData=filteredData.filter(r=>r.employer===employer);const excerpts=[];empData.forEach(r=>{const text=(r.strengths||'').trim();if(!text||isEmptyResponse(text))return;if(keys.some(k=>wordBoundaryMatch(text,k))){const matchedKey=keys.find(k=>wordBoundaryMatch(text,k));excerpts.push({text,studentId:r.studentId,originalEmployer:r.originalEmployer,evalType:r.evalType,term:r.term,matchedKey});}});document.getElementById('employerDrillTitle').textContent=`${label} at ${employer}`;document.getElementById('employerDrillSub').textContent=`${excerpts.length} excerpt${excerpts.length!==1?'s':''} found`;document.getElementById('employerDrillBody').innerHTML=`<button class="modal-back-btn" onclick="document.getElementById('employerDrillModal').classList.remove('open');openEmployerDetail('${employer.replace(/'/g,"\\'")}');">← Back to ${employer}</button>`+(excerpts.length?excerpts.map(e=>{let highlighted=escapeHtml(e.text);if(e.matchedKey){const re=new RegExp('('+e.matchedKey.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');highlighted=highlighted.replace(re,'<mark class="modal-excerpt-highlight">$1</mark>');}return`<div class="modal-excerpt" style="border-left-color:#3B5BDB;"><div class="modal-excerpt-text">${highlighted}</div><div class="modal-excerpt-meta"><span class="modal-excerpt-field" style="background:#3B5BDB18;color:#3B5BDB;">Matched: ${e.matchedKey}</span><span class="modal-excerpt-source">${e.studentId}${e.originalEmployer?' · '+e.originalEmployer:''} · ${e.evalType} · ${e.term}</span></div></div>`;}).join(''):`<div class="modal-empty">No matching quotes found.</div>`);document.getElementById('employerDrillModal').classList.add('open');}
+
+function openEmployerImprovDrill(employer,label,keys){const empData=filteredData.filter(r=>r.employer===employer);const excerpts=[];empData.forEach(r=>{const text=(r.improvement||'').trim();if(!text||isEmptyResponse(text))return;if(keys.some(k=>wordBoundaryMatch(text,k))){const matchedKey=keys.find(k=>wordBoundaryMatch(text,k));excerpts.push({text,studentId:r.studentId,originalEmployer:r.originalEmployer,evalType:r.evalType,term:r.term,matchedKey});}});document.getElementById('employerDrillTitle').textContent=`${label} at ${employer}`;document.getElementById('employerDrillSub').textContent=`${excerpts.length} excerpt${excerpts.length!==1?'s':''} found`;document.getElementById('employerDrillBody').innerHTML=`<button class="modal-back-btn" onclick="document.getElementById('employerDrillModal').classList.remove('open');openEmployerDetail('${employer.replace(/'/g,"\\'")}');">← Back to ${employer}</button>`+(excerpts.length?excerpts.map(e=>{let highlighted=escapeHtml(e.text);if(e.matchedKey){const re=new RegExp('('+e.matchedKey.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');highlighted=highlighted.replace(re,'<mark class="modal-excerpt-highlight">$1</mark>');}return`<div class="modal-excerpt" style="border-left-color:#E67700;"><div class="modal-excerpt-text">${highlighted}</div><div class="modal-excerpt-meta"><span class="modal-excerpt-field" style="background:#E6770018;color:#E67700;">Matched: ${e.matchedKey}</span><span class="modal-excerpt-source">${e.studentId}${e.originalEmployer?' · '+e.originalEmployer:''} · ${e.evalType} · ${e.term}</span></div></div>`;}).join(''):`<div class="modal-empty">No matching quotes found.</div>`);document.getElementById('employerDrillModal').classList.add('open');}
+
+function openEmployerNaceDrill(employer,label,naceKey){const empData=filteredData.filter(r=>r.employer===employer&&r.evalType==='Final');const ratings=empData.map(r=>({studentId:r.studentId,originalEmployer:r.originalEmployer,rating:r[naceKey]||'Not rated'}));const stronglyAgree=ratings.filter(r=>r.rating.toLowerCase().includes('strongly agree')).length;document.getElementById('employerDrillTitle').textContent=`${label} at ${employer}`;document.getElementById('employerDrillSub').textContent=`${stronglyAgree} of ${ratings.length} rated "Strongly Agree"`;document.getElementById('employerDrillBody').innerHTML=`<button class="modal-back-btn" onclick="document.getElementById('employerDrillModal').classList.remove('open');openEmployerDetail('${employer.replace(/'/g,"\\'")}');">← Back to ${employer}</button><table class="employer-table"><thead><tr><th>Intern</th><th>Department</th><th>Rating</th></tr></thead><tbody>${ratings.map(r=>`<tr><td>${r.studentId}</td><td style="font-size:12px;color:var(--text-secondary);">${r.originalEmployer||'—'}</td><td><span class="badge ${r.rating.toLowerCase().includes('strongly agree')?'badge-green':'badge-gray'}">${r.rating}</span></td></tr>`).join('')}</tbody></table>`;document.getElementById('employerDrillModal').classList.add('open');}
+
+function openEmployerQuotesDrill(employer){const empData=filteredData.filter(r=>r.employer===employer);const quotes=[];empData.forEach(r=>{if(r.strengths&&!isEmptyResponse(r.strengths))quotes.push({text:r.strengths,type:'Strengths',intern:r.studentId,originalEmployer:r.originalEmployer,evalType:r.evalType});if(r.improvement&&!isEmptyResponse(r.improvement))quotes.push({text:r.improvement,type:'Improvement',intern:r.studentId,originalEmployer:r.originalEmployer,evalType:r.evalType});if(r.impact&&!isEmptyResponse(r.impact))quotes.push({text:r.impact,type:'Impact',intern:r.studentId,originalEmployer:r.originalEmployer,evalType:r.evalType});if(r.feedback&&!isEmptyResponse(r.feedback))quotes.push({text:r.feedback,type:'Feedback',intern:r.studentId,originalEmployer:r.originalEmployer,evalType:r.evalType});});document.getElementById('employerDrillTitle').textContent=`All Quotes from ${employer}`;document.getElementById('employerDrillSub').textContent=`${quotes.length} quote${quotes.length!==1?'s':''} found`;const colors={Strengths:'#2F9E44',Improvement:'#E67700',Impact:'#3B5BDB',Feedback:'#7950F2'};document.getElementById('employerDrillBody').innerHTML=`<button class="modal-back-btn" onclick="document.getElementById('employerDrillModal').classList.remove('open');openEmployerDetail('${employer.replace(/'/g,"\\'")}');">← Back to ${employer}</button>`+quotes.map(q=>`<div class="modal-excerpt" style="border-left-color:${colors[q.type]};"><div class="modal-excerpt-text">"${escapeHtml(q.text)}"</div><div class="modal-excerpt-meta"><span class="modal-excerpt-field" style="background:${colors[q.type]}18;color:${colors[q.type]};">${q.type}</span><span class="modal-excerpt-source">${q.intern}${q.originalEmployer?' · '+q.originalEmployer:''} · ${q.evalType}</span></div></div>`).join('');document.getElementById('employerDrillModal').classList.add('open');}
+
+function closeEmployerDrillModal(e){if(e.target===document.getElementById('employerDrillModal'))document.getElementById('employerDrillModal').classList.remove('open');}
+
+function renderQualitative(){
+const el=document.getElementById('qualContent');
+if(!filteredData.length){
+el.innerHTML=`<div class="empty-state"><div class="empty-icon">❝</div><div class="empty-title">No data yet</div><div class="empty-sub">Upload evaluation files to see qualitative responses.</div></div>`;
+return;
+}
+const sorted=defaultSort(filteredData);
+el.innerHTML=sorted.map(r=>{
+const displayEmp=r.employer==='University of Mary Washington'&&r.originalEmployer?`${r.employer} (${r.originalEmployer})`:r.employer;
+const jobBadge=r.jobOffered==='Yes'?'<span class="badge badge-green">✓ Job</span>':'';
+return`<div class="qual-card"><div class="qual-card-meta"><span class="qual-card-name">${r.studentId}</span><span class="badge ${r.evalType==='Final'?'badge-final':'badge-midterm'}">${r.evalType||'—'}</span>${jobBadge}<span class="badge badge-gray">${r.term||'—'}</span><span class="qual-card-employer">${displayEmp||''}</span></div>${qualSection('Work Responsibilities',r.responsibilities,'')}${qualSection('Strengths',r.strengths,'strengths')}${qualSection('Areas for Improvement',r.improvement,'improvement')}${qualSection('Organizational Impact',r.impact,'impact')}${qualSection('General Feedback to UMW',r.feedback,'feedback')}${r.supervisorPlan?qualSection('Supervisor Support Plan',r.supervisorPlan,'feedback'):''}${r.uwmSupport?qualSection('Request to UMW Faculty',r.uwmSupport,'feedback'):''}</div>`
+}).join('');
+}
+
+function qualSection(label,text,cls){
+if(!text||text.toLowerCase()==='none'||isEmptyResponse(text))return'';
+return`<div class="qual-section"><div class="qual-section-label">${label}</div><div class="qual-section-text ${cls}">${text}</div></div>`;
+}
+
+function buildQuotes(){
+const quotes=[];
+filteredData.forEach(r=>{
+const displayEmp=r.employer==='University of Mary Washington'&&r.originalEmployer?r.originalEmployer:r.employer;
+const attr=`${r.studentId} · ${displayEmp||'?'} · ${r.evalType||''} Eval`;
+const add=(text,type)=>{
+if(text&&text.trim().length>15&&!isEmptyResponse(text)){
+quotes.push({text:text.trim(),attr,type,studentId:r.studentId,employer:r.employer,originalEmployer:r.originalEmployer});
+}
+};
+add(r.strengths,'strengths');
+add(r.improvement,'improvement');
+add(r.impact,'impact');
+add(r.feedback,'feedback');
+add(r.supervisorPlan,'support');
+add(r.uwmSupport,'support');
+});
+return quotes;
+}
+
+let allQuotes=[];
+function renderQuoteBank(){
+allQuotes=buildQuotes();
+filterQuotes(activeQuoteFilter,null);
+}
+
+function filterQuotes(type,btn){
+activeQuoteFilter=type;
+document.querySelectorAll('.qb-filter').forEach(b=>b.classList.remove('active'));
+if(btn)btn.classList.add('active');
+else document.querySelector(`.qb-filter[onclick*="${type}"]`)?.classList.add('active');
+const visible=type==='all'?allQuotes:allQuotes.filter(q=>q.type===type);
+const el=document.getElementById('quoteList');
+if(!visible.length){
+el.innerHTML=`<div class="empty-state"><div class="empty-icon">★</div><div class="empty-title">No quotes in this category</div><div class="empty-sub">Try a different filter or upload more files.</div></div>`;
+return;
+}
+el.innerHTML=visible.map((q,i)=>`<div class="quote-item"><div><div class="quote-text">"${escapeHtml(q.text)}"</div><div class="quote-attribution">${q.attr}</div></div><button class="copy-btn" id="copybtn-${i}" onclick="copyQuote(${i},'${encodeURIComponent(q.text)}','${encodeURIComponent(q.attr)}')">Copy</button></div>`).join('');
+}
+
+function copyQuote(i,textEnc,attrEnc){
+const text=decodeURIComponent(textEnc),attr=decodeURIComponent(attrEnc);
+navigator.clipboard.writeText(`"${text}"\n— ${attr}`).then(()=>{
+const btn=document.getElementById(`copybtn-${i}`);
+if(btn){
+btn.textContent='Copied!';
+btn.classList.add('copied');
+setTimeout(()=>{
+btn.textContent='Copy';
+btn.classList.remove('copied');
+},2000);
+}
+});
+}
+
+function exportCSV(){
+if(!filteredData.length){showToast('No data to export');return;}
+const headers=['ID','Employer','Original Employer','Major','Term','Eval Type','Job Offered','UMW Affiliated','Responsibilities','Strengths','Improvement','Impact','Feedback','Satisfaction','Host Again'];
+const rows=filteredData.map(r=>[r.studentId,r.employer,r.originalEmployer,r.major,r.term,r.evalType,r.jobOffered,r.isUmwAffiliated?'Yes':'No',r.responsibilities,r.strengths,r.improvement,r.impact,r.feedback,r.satisfaction,r.hostAgain].map(v=>`"${String(v||'').replace(/"/g,'""')}"`));
+const csv=[headers.join(','),...rows.map(r=>r.join(','))].join('\n');
+const blob=new Blob([csv],{type:'text/csv'});
+const a=document.createElement('a');
+a.href=URL.createObjectURL(blob);
+a.download='ccpd_eval_data.csv';
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+showToast('CSV exported');
+}
+
+function exportFullReport(){
+if(!filteredData.length){showToast('No data to export');return;}
+const wb=XLSX.utils.book_new();
+const timestamp=new Date().toLocaleString();
+const filterStatus=[];
+if(document.getElementById('filterTerm').value)filterStatus.push(`Term: ${document.getElementById('filterTerm').value}`);
+if(document.getElementById('filterEmployer').value)filterStatus.push(`Employer: ${document.getElementById('filterEmployer').value}`);
+if(document.getElementById('filterMajor').value)filterStatus.push(`Major: ${document.getElementById('filterMajor').value}`);
+if(document.getElementById('filterEvalType').value)filterStatus.push(`Type: ${document.getElementById('filterEvalType').value}`);
+const filterNote=filterStatus.length?filterStatus.join(' | '):'No filters applied';
+const total=filteredData.length;
+const uniqueInterns=new Set(filteredData.map(r=>r.studentName).filter(Boolean)).size;
+const uniqueEmployers=new Set(filteredData.map(r=>r.employer).filter(Boolean)).size;
+const finals=filteredData.filter(r=>r.evalType==='Final').length;
+const midterms=filteredData.filter(r=>r.evalType==='Midterm').length;
+const workModes={};
+filteredData.forEach(r=>{const mode=r.workMode||'Not specified';workModes[mode]=(workModes[mode]||0)+1;});
+const satisfiedCount=filteredData.filter(r=>r.satisfaction?.toLowerCase().includes('very satisfied')).length;
+const satRate=finals>0?Math.round((satisfiedCount/finals)*100):0;
+const hostAgainCount=filteredData.filter(r=>r.hostAgain?.toLowerCase()==='yes').length;
+const hostRate=finals>0?Math.round((hostAgainCount/finals)*100):0;
+const finalsWithJob=filteredData.filter(r=>r.evalType==='Final'&&r.jobOffered);
+const jobYes=finalsWithJob.filter(r=>r.jobOffered==='Yes').length;
+const jobPct=finalsWithJob.length>0?Math.round((jobYes/finalsWithJob.length)*100):0;
+const hoursData=filteredData.filter(r=>r.hours).map(r=>({intern:r.studentId,hours:r.hours}));
+const sheet1Data=[
+['CCPD INTERNSHIP EVALUATION REPORT'],
+[''],
+['Generated:',timestamp],
+['Filters:',filterNote],
+[''],
+[''],
+['KEY METRICS'],
+[''],
+['Metric','Value','Notes'],
+['Total Evaluations',total,''],
+['Unique Interns',uniqueInterns,''],
+['Unique Employers',uniqueEmployers,''],
+[''],
+['EVALUATION TYPE BREAKDOWN'],
+['Type','Count','Percentage'],
+['Final Evaluations',finals,total>0?Math.round((finals/total)*100)+'%':'0%'],
+['Midterm Evaluations',midterms,total>0?Math.round((midterms/total)*100)+'%':'0%'],
+[''],
+['WORK MODE BREAKDOWN'],
+['Mode','Count','Percentage']
+];
+Object.entries(workModes).sort((a,b)=>b[1]-a[1]).forEach(([mode,count])=>{
+sheet1Data.push([mode,count,total>0?Math.round((count/total)*100)+'%':'0%']);
+});
+sheet1Data.push(['']);
+sheet1Data.push(['SATISFACTION METRICS (Final Evaluations Only)']);
+sheet1Data.push(['Metric','Rate','Count']);
+sheet1Data.push(['Very Satisfied',satRate+'%',`${satisfiedCount} of ${finals}`]);
+sheet1Data.push(['Would Host Again',hostRate+'%',`${hostAgainCount} of ${finals}`]);
+sheet1Data.push(['Job Offered',jobPct+'%',`${jobYes} of ${finalsWithJob.length}`]);
+if(hoursData.length){
+sheet1Data.push(['']);
+sheet1Data.push(['HOURS COMPLETED']);
+sheet1Data.push(['Intern ID','Hours Reported']);
+hoursData.forEach(h=>sheet1Data.push([h.intern,h.hours]));
+}
+const ws1=XLSX.utils.aoa_to_sheet(sheet1Data);
+ws1['!cols']=[{wch:30},{wch:20},{wch:40}];
+ws1['!merges']=[{s:{r:0,c:0},e:{r:0,c:2}}];
+XLSX.utils.book_append_sheet(wb,ws1,'Overview & Stats');
+const dataHeaders=['Intern ID','Employer','Original Dept/Office','UMW Affiliated','Major','Term','Eval Type','Job Offered','Work Mode','Hours','Satisfaction','Would Host Again','Employment Outcome','Responsibilities','Strengths','Areas for Improvement','Organizational Impact','General Feedback','Supervisor Support Plan'];
+const dataRows=filteredData.map(r=>[
+r.studentId||'',
+r.employer||'',
+r.originalEmployer||'',
+r.isUmwAffiliated?'Yes':'No',
+r.major||'',
+r.term||'',
+r.evalType||'',
+r.jobOffered||'',
+r.workMode||'',
+r.hours||'',
+r.satisfaction||'',
+r.hostAgain||'',
+r.employed||'',
+r.responsibilities||'',
+r.strengths||'',
+r.improvement||'',
+r.impact||'',
+r.feedback||'',
+r.supervisorPlan||''
+]);
+const ws2=XLSX.utils.aoa_to_sheet([dataHeaders,...dataRows]);
+ws2['!cols']=[{wch:12},{wch:25},{wch:25},{wch:12},{wch:20},{wch:15},{wch:10},{wch:12},{wch:15},{wch:10},{wch:18},{wch:12},{wch:15},{wch:50},{wch:50},{wch:50},{wch:50},{wch:50},{wch:50}];
+ws2['!freeze']={xSplit:0,ySplit:1};
+XLSX.utils.book_append_sheet(wb,ws2,'Full Evaluation Data');
+const strengthSheet=[
+['STRENGTH THEMES ANALYSIS'],
+[''],
+['Theme analysis based on keyword matching in supervisor responses.'],
+['']
+];
+const strengthThemes=STRENGTH_THEMES.map(t=>({...t,count:countTheme(filteredData,'strengths',t.keys)})).filter(t=>t.count>0).sort((a,b)=>b.count-a.count);
+strengthThemes.forEach(theme=>{
+strengthSheet.push(['']);
+strengthSheet.push(['═══ '+theme.label.toUpperCase()+' ═══','','Match Count: '+theme.count]);
+strengthSheet.push(['']);
+strengthSheet.push(['Quote','Source (Intern · Employer · Type)']);
+filteredData.forEach(r=>{
+const text=(r.strengths||'').trim();
+if(!text||isEmptyResponse(text))return;
+if(theme.keys.some(k=>wordBoundaryMatch(text,k))){
+const displayEmp=r.employer==='University of Mary Washington'&&r.originalEmployer?r.originalEmployer:r.employer;
+strengthSheet.push([text,`${r.studentId} · ${displayEmp||'—'} · ${r.evalType||'—'}`]);
+}
+});
+});
+const ws3=XLSX.utils.aoa_to_sheet(strengthSheet);
+ws3['!cols']=[{wch:80},{wch:40}];
+XLSX.utils.book_append_sheet(wb,ws3,'Strength Themes');
+const improvSheet=[
+['GROWTH AREA THEMES ANALYSIS'],
+[''],
+['Theme analysis based on keyword matching in supervisor responses.'],
+['']
+];
+const improvThemes=IMPROVEMENT_THEMES.map(t=>({...t,count:countTheme(filteredData,'improvement',t.keys)})).filter(t=>t.count>0).sort((a,b)=>b.count-a.count);
+improvThemes.forEach(theme=>{
+improvSheet.push(['']);
+improvSheet.push(['═══ '+theme.label.toUpperCase()+' ═══','','Match Count: '+theme.count]);
+improvSheet.push(['']);
+improvSheet.push(['Quote','Source (Intern · Employer · Type)']);
+filteredData.forEach(r=>{
+const text=(r.improvement||'').trim();
+if(!text||isEmptyResponse(text))return;
+if(theme.keys.some(k=>wordBoundaryMatch(text,k))){
+const displayEmp=r.employer==='University of Mary Washington'&&r.originalEmployer?r.originalEmployer:r.employer;
+improvSheet.push([text,`${r.studentId} · ${displayEmp||'—'} · ${r.evalType||'—'}`]);
+}
+});
+});
+const ws4=XLSX.utils.aoa_to_sheet(improvSheet);
+ws4['!cols']=[{wch:80},{wch:40}];
+XLSX.utils.book_append_sheet(wb,ws4,'Growth Area Themes');
+const impactSheet=[
+['ORGANIZATIONAL IMPACT THEMES'],
+[''],
+['Analysis of how organizations were impacted by internships.'],
+['']
+];
+IMPACT_PHRASES.forEach(phrase=>{
+const count=countImpactPhrase(filteredData,phrase.keys);
+if(count===0)return;
+impactSheet.push(['']);
+impactSheet.push(['═══ '+phrase.phrase.toUpperCase()+' ═══','','Match Count: '+count]);
+impactSheet.push(['']);
+impactSheet.push(['Quote','Field','Source']);
+filteredData.forEach(r=>{
+['impact','responsibilities','feedback'].forEach(field=>{
+const text=(r[field]||'').trim();
+if(!text||isEmptyResponse(text))return;
+if(phrase.keys.some(k=>wordBoundaryMatch(text,k))){
+const displayEmp=r.employer==='University of Mary Washington'&&r.originalEmployer?r.originalEmployer:r.employer;
+impactSheet.push([text,field.charAt(0).toUpperCase()+field.slice(1),`${r.studentId} · ${displayEmp||'—'} · ${r.evalType||'—'}`]);
+}
+});
+});
+});
+const ws5=XLSX.utils.aoa_to_sheet(impactSheet);
+ws5['!cols']=[{wch:70},{wch:15},{wch:35}];
+XLSX.utils.book_append_sheet(wb,ws5,'Organizational Impact');
+const finalRecs=filteredData.filter(r=>r.evalType==='Final');
+const naceSheet=[
+['NACE COMPETENCY RATINGS'],
+[''],
+['Note: This data is from FINAL evaluations only.'],
+[`Total Final Evaluations: ${finalRecs.length}`],
+[''],
+['Competency','Strongly Agree Count','Total Responses','Percentage','Visual']
+];
+const naceKeys=Object.keys(NACE_LABELS);
+naceKeys.forEach(k=>{
+const count=finalRecs.filter(r=>(r[k]||'').toLowerCase().includes('strongly agree')).length;
+const pct=finalRecs.length?Math.round((count/finalRecs.length)*100):0;
+const visual='█'.repeat(Math.round(pct/5))+'░'.repeat(20-Math.round(pct/5));
+naceSheet.push([NACE_LABELS[k],count,finalRecs.length,pct+'%',visual]);
+});
+const ws6=XLSX.utils.aoa_to_sheet(naceSheet);
+ws6['!cols']=[{wch:30},{wch:20},{wch:15},{wch:12},{wch:25}];
+XLSX.utils.book_append_sheet(wb,ws6,'NACE Competencies');
+const quoteSheet=[
+['QUOTE BANK'],
+[''],
+['All substantive open-ended quotes organized by category.'],
+['Use the "Use in Content?" column to mark quotes for reports.'],
+[''],
+['Quote','Category','Source (Intern · Employer · Type · Term)','Use in Content?']
+];
+const categoryMap={strengths:'Strengths',improvement:'Growth Areas',impact:'Organizational Impact',feedback:'General Feedback',support:'Support Plans'};
+allQuotes.forEach(q=>{
+const displayEmp=q.employer==='University of Mary Washington'&&q.originalEmployer?q.originalEmployer:q.employer;
+quoteSheet.push([
+q.text,
+categoryMap[q.type]||q.type,
+`${q.studentId} · ${displayEmp||'—'} · ${q.attr.split('·').slice(-1)[0]?.trim()||''}`,
+''
+]);
+});
+const ws7=XLSX.utils.aoa_to_sheet(quoteSheet);
+ws7['!cols']=[{wch:80},{wch:20},{wch:40},{wch:15}];
+XLSX.utils.book_append_sheet(wb,ws7,'Quote Bank');
+const umwData=filteredData.filter(r=>r.employer==='University of Mary Washington');
+if(umwData.length){
+const umwSheet=[
+['UMW DEPARTMENT/OFFICE BREAKDOWN'],
+[''],
+['All positions grouped under "University of Mary Washington"'],
+[''],
+['Original Employer Name','Intern Count','Eval Types','Intern IDs']
+];
+const deptGroups={};
+umwData.forEach(r=>{
+const key=r.originalEmployer||'Unknown';
+if(!deptGroups[key])deptGroups[key]={count:0,interns:new Set(),evalTypes:new Set()};
+deptGroups[key].count++;
+deptGroups[key].interns.add(r.studentId);
+if(r.evalType)deptGroups[key].evalTypes.add(r.evalType);
+});
+Object.entries(deptGroups).sort((a,b)=>b[1].count-a[1].count).forEach(([dept,data])=>{
+umwSheet.push([dept,data.interns.size,[...data.evalTypes].join(', '),[...data.interns].join(', ')]);
+});
+const ws8=XLSX.utils.aoa_to_sheet(umwSheet);
+ws8['!cols']=[{wch:40},{wch:12},{wch:20},{wch:60}];
+XLSX.utils.book_append_sheet(wb,ws8,'UMW Breakdown');
+}
+const wbout=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+const blob=new Blob([wbout],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+const url=URL.createObjectURL(blob);
+const a=document.createElement('a');
+a.href=url;
+a.download=`CCPD_Full_Report_${new Date().toISOString().slice(0,10)}.xlsx`;
+document.body.appendChild(a);
+setTimeout(()=>{
+a.click();
+document.body.removeChild(a);
+URL.revokeObjectURL(url);
+showToast('Full report exported with 8 sheets');
+},100);
+}
+
+function exportVisualReport(){
+if(!filteredData.length){showToast('No data to export');return;}
+const total=filteredData.length;
+const finals=filteredData.filter(r=>r.evalType==='Final').length;
+const midterms=filteredData.filter(r=>r.evalType==='Midterm').length;
+const interns=new Set(filteredData.map(r=>r.studentId)).size;
+const employers=new Set(filteredData.map(r=>r.employer).filter(Boolean)).size;
+const finalsWithJob=filteredData.filter(r=>r.evalType==='Final'&&r.jobOffered);
+const jobYes=finalsWithJob.filter(r=>r.jobOffered==='Yes').length;
+const jobPct=finalsWithJob.length>0?Math.round((jobYes/finalsWithJob.length)*100):0;
+const satPct=finals>0?Math.round((filteredData.filter(r=>r.satisfaction?.toLowerCase().includes('very satisfied')).length/finals)*100):0;
+const hostPct=finals>0?Math.round((filteredData.filter(r=>r.hostAgain?.toLowerCase()==='yes').length/finals)*100):0;
+const strengthCounts=currentStrengthThemes.filter(t=>t.count>0).slice(0,6);
+const improvCounts=currentImprovThemes.filter(t=>t.count>0).slice(0,6);
+const maxS=strengthCounts[0]?.count||1;
+const maxI=improvCounts[0]?.count||1;
+let html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>CCPD Evaluation Report</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fff;color:#1a1d23;line-height:1.5;padding:2rem}h1{font-size:24px;margin-bottom:0.5rem}h2{font-size:18px;margin:2rem 0 1rem;padding-bottom:0.5rem;border-bottom:2px solid #3B5BDB}.subtitle{color:#666;font-size:14px;margin-bottom:2rem}.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;margin-bottom:2rem}.stat{background:linear-gradient(135deg,#3B5BDB,#748FFC);color:white;padding:1.5rem;border-radius:10px;text-align:center}.stat.highlight{background:linear-gradient(135deg,#2F9E44,#51cf66)}.stat-num{font-size:32px;font-weight:700}.stat-label{font-size:12px;opacity:0.9;margin-top:4px}.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-bottom:2rem}.chart{background:#f8f9fa;padding:1.5rem;border-radius:10px}.chart h3{font-size:14px;margin-bottom:1rem}.bar{display:flex;align-items:center;margin-bottom:8px}.bar-label{width:150px;font-size:12px;flex-shrink:0}.bar-track{flex:1;background:#e2e6ea;border-radius:4px;height:24px;overflow:hidden}.bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px}.bar-fill span{color:white;font-size:11px;font-weight:600}.quote-section{margin-top:2rem}.quote{background:#f8f9fa;border-left:4px solid #3B5BDB;padding:1rem;margin-bottom:1rem;border-radius:0 8px 8px 0}.quote-text{font-style:italic;margin-bottom:0.5rem}.quote-attr{font-size:12px;color:#666}@media print{body{padding:1rem}.stats{grid-template-columns:repeat(3,1fr)}.chart-row{grid-template-columns:1fr}}</style></head><body>`;
+html+=`<h1>CCPD Internship Evaluation Report</h1><p class="subtitle">Generated ${new Date().toLocaleDateString()} · ${total} evaluations across ${interns} interns</p>`;
+html+=`<div class="stats"><div class="stat"><div class="stat-num">${total}</div><div class="stat-label">Total Evaluations</div></div><div class="stat"><div class="stat-num">${interns}</div><div class="stat-label">Unique Interns</div></div><div class="stat"><div class="stat-num">${employers}</div><div class="stat-label">Employers</div></div><div class="stat highlight"><div class="stat-num">${jobPct}%</div><div class="stat-label">Job Offer Rate</div></div><div class="stat"><div class="stat-num">${satPct}%</div><div class="stat-label">Very Satisfied</div></div></div>`;
+html+=`<div class="chart-row"><div class="chart"><h3>Top Intern Strengths</h3>${strengthCounts.map(t=>`<div class="bar"><div class="bar-label">${t.label}</div><div class="bar-track"><div class="bar-fill" style="width:${(t.count/maxS)*100}%;background:linear-gradient(90deg,#3B5BDB,#748FFC);"><span>${t.count}</span></div></div></div>`).join('')}</div><div class="chart"><h3>Common Growth Areas</h3>${improvCounts.map(t=>`<div class="bar"><div class="bar-label">${t.label}</div><div class="bar-track"><div class="bar-fill" style="width:${(t.count/maxI)*100}%;background:linear-gradient(90deg,#E67700,#FAB005);"><span>${t.count}</span></div></div></div>`).join('')}</div></div>`;
+const sampleQuotes=allQuotes.filter(q=>q.type==='strengths'||q.type==='impact').slice(0,4);
+if(sampleQuotes.length){html+=`<h2>Sample Quotes</h2><div class="quote-section">${sampleQuotes.map(q=>`<div class="quote"><div class="quote-text">"${escapeHtml(q.text.slice(0,300))}${q.text.length>300?'...':''}"</div><div class="quote-attr">— ${q.attr}</div></div>`).join('')}</div>`;}
+html+=`</body></html>`;
+const blob=new Blob([html],{type:'text/html'});
+const url=URL.createObjectURL(blob);
+window.open(url,'_blank');
+showToast('Visual report opened - use Cmd+P to save as PDF');
+}
+
+function showPage(id){
+document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+document.getElementById('page-'+id).classList.add('active');
+document.querySelector(`[data-page="${id}"]`).classList.add('active');
+}
+
+function showToast(msg){
+const t=document.getElementById('toast');
+t.textContent=msg;
+t.classList.add('show');
+setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+function escapeHtml(str){
+if(!str)return'';
+return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.addEventListener('keydown',e=>{
+if(e.key==='Escape'){
+document.getElementById('phraseModal')?.classList.remove('open');
+document.getElementById('employerModal')?.classList.remove('open');
+document.getElementById('employerDetailModal')?.classList.remove('open');
+document.getElementById('employerDrillModal')?.classList.remove('open');
+document.getElementById('umwCategoryModal')?.classList.remove('open');
+document.getElementById('umwDeptModal')?.classList.remove('open');
+}
+});
+
+loadTags();
+</script>
+</body>
+</html>
